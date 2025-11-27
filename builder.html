@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>여행 가이드 빌더</title>
+<title>여행 가이드 빌더 V4</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 <style>
@@ -34,7 +34,7 @@
 
 <div class="container">
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">🧳 여행 가이드 빌더</h1>
+        <h1 class="text-2xl font-bold text-gray-800">🧳 여행 빌더 V4</h1>
         <button onclick="saveWork()" class="btn btn-gray text-xs">임시 저장</button>
     </div>
 
@@ -44,11 +44,12 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="font-bold text-sm text-gray-600">여행 제목</label>
-                <input type="text" id="appTitle" class="input-field" value="나만의 여행">
+                <!-- 입력 즉시 데이터 업데이트 (초기화 방지) -->
+                <input type="text" id="appTitle" class="input-field" oninput="tripData.title=this.value" placeholder="여행 제목 입력">
             </div>
             <div>
                 <label class="font-bold text-sm text-gray-600">테마 색상</label>
-                <select id="themeColor" class="input-field">
+                <select id="themeColor" class="input-field" onchange="tripData.theme=this.value">
                     <option value="blue">블루 (기본)</option>
                     <option value="pink">핑크 (벚꽃)</option>
                     <option value="green">그린 (자연)</option>
@@ -63,9 +64,9 @@
                 <label for="chkMultiPlan" class="font-bold text-gray-800 cursor-pointer select-none">🔄 멀티 플랜(A/B 선택) 사용하기</label>
             </div>
             <div id="multiPlanInputs" class="grid grid-cols-3 gap-2" style="display:none;">
-                <div><label class="text-xs text-blue-600 font-bold">Plan A</label><input type="text" id="planAName" class="input-field" placeholder="예: 렌트카"></div>
-                <div><label class="text-xs text-pink-600 font-bold">Plan B</label><input type="text" id="planBName" class="input-field" placeholder="예: 대중교통"></div>
-                <div><label class="text-xs text-green-600 font-bold">Plan C</label><input type="text" id="planCName" class="input-field" placeholder="예: 택시투어"></div>
+                <div><label class="text-xs text-blue-600 font-bold">Plan A</label><input type="text" id="planAName" class="input-field" placeholder="예: 렌트카" oninput="tripData.planA=this.value"></div>
+                <div><label class="text-xs text-pink-600 font-bold">Plan B</label><input type="text" id="planBName" class="input-field" placeholder="예: 대중교통" oninput="tripData.planB=this.value"></div>
+                <div><label class="text-xs text-green-600 font-bold">Plan C</label><input type="text" id="planCName" class="input-field" placeholder="예: 택시투어" oninput="tripData.planC=this.value"></div>
             </div>
         </div>
     </div>
@@ -73,6 +74,7 @@
     <!-- 2. 체크리스트 -->
     <div class="card">
         <h2 class="text-xl font-bold mb-4">2. 체크리스트</h2>
+        <p class="text-sm text-gray-500 mb-2">💡 항목별로 어떤 플랜에 보여줄지 선택하세요.</p>
         <div id="check-list"></div>
         <button onclick="addCheck()" class="btn btn-blue text-sm mt-2">+ 항목 추가</button>
     </div>
@@ -87,16 +89,18 @@
 
 <div class="fixed bottom-0 left-0 w-full p-4 bg-white border-t shadow-lg z-50">
     <div class="container flex gap-2">
-        <button onclick="openApp()" class="btn btn-green flex-1">🚀 앱 실행</button>
+        <button onclick="openApp()" class="btn btn-green flex-1">🚀 앱 실행 (index.html 연결)</button>
         <button onclick="copyLink()" class="btn btn-dark w-24">🔗 복사</button>
     </div>
 </div>
 
 <script>
+    // --- 데이터 구조 ---
     let tripData = {
-        title: "", theme: "blue", useMulti: false,
+        title: "나만의 여행", theme: "blue", useMulti: false,
         planA: "", planB: "", planC: "",
-        checks: [{text:""}],
+        // checks 구조 변경: text와 type(누구에게 보여줄지)
+        checks: [{text:"", type:"all"}],
         days: [{ date: "1일차", title: "", eventsA: [{time:"10:00", icon:"✈️", type:"fly", title:"공항 도착", desc:"", map:""}], eventsB: [], eventsC: [] }]
     };
 
@@ -106,9 +110,16 @@
         {v:"camera", l:"📷관광"}, {v:"shop", l:"🛍️쇼핑"}, {v:"bed", l:"🛏️숙소"}, {v:"map", l:"📍장소"}
     ];
 
-    function toggleMultiPlan() { tripData.useMulti = document.getElementById('chkMultiPlan').checked; render(); }
+    function toggleMultiPlan() {
+        tripData.useMulti = document.getElementById('chkMultiPlan').checked;
+        // 입력창 표시 제어
+        const multiInputs = document.getElementById('multiPlanInputs');
+        multiInputs.style.display = tripData.useMulti ? 'grid' : 'none';
+        render(); 
+    }
 
     function render() {
+        // 1. 입력값 복구 (데이터 -> 화면)
         document.getElementById('appTitle').value = tripData.title;
         document.getElementById('themeColor').value = tripData.theme;
         document.getElementById('chkMultiPlan').checked = tripData.useMulti;
@@ -123,12 +134,32 @@
             multiInputs.style.display = 'none';
         }
 
+        // 2. 체크리스트 렌더링 (구조 변경됨)
         const cList = document.getElementById('check-list');
         cList.innerHTML = '';
         tripData.checks.forEach((c, i) => {
-            cList.innerHTML += `<div class="flex gap-2 mb-2"><input class="input-field" value="${c.text}" oninput="tripData.checks[${i}].text=this.value"><button class="btn btn-red" onclick="tripData.checks.splice(${i},1); render();">삭제</button></div>`;
+            // 플랜 선택 옵션
+            let typeOpts = `<option value="all">공통</option>`;
+            if(tripData.useMulti) {
+                typeOpts += `<option value="A">Plan A 만</option>`;
+                typeOpts += `<option value="B">Plan B 만</option>`;
+                typeOpts += `<option value="C">Plan C 만</option>`;
+            }
+
+            cList.innerHTML += `
+                <div class="flex gap-2 mb-2">
+                    <input class="input-field flex-1" value="${c.text}" placeholder="준비물 입력" oninput="tripData.checks[${i}].text=this.value">
+                    <select class="input-field w-28" onchange="tripData.checks[${i}].type=this.value" style="font-size:0.8rem;">
+                        ${typeOpts}
+                    </select>
+                    <button class="btn btn-red" onclick="tripData.checks.splice(${i},1); render();">삭제</button>
+                </div>`;
+            // Select 값 복구
+            const selects = cList.querySelectorAll('select');
+            if(selects[i]) selects[i].value = c.type || 'all';
         });
 
+        // 3. 일정 렌더링
         const dCont = document.getElementById('days-container');
         dCont.innerHTML = '';
         
@@ -172,6 +203,7 @@
         }).join('');
     }
 
+    // --- 데이터 조작 ---
     function updateDay(idx, key, val) { tripData.days[idx][key] = val; }
     function removeDay(idx) { if(confirm('삭제합니까?')) { tripData.days.splice(idx, 1); render(); } }
     function addDay() { tripData.days.push({date:"Day "+(tripData.days.length+1), title:"", eventsA:[], eventsB:[], eventsC:[]}); render(); }
@@ -179,18 +211,28 @@
     function addEvent(dIdx, plan) { const newEv = {time:"00:00", type:"map", icon:"📍", title:"", desc:"", map:""}; if(plan==='A') tripData.days[dIdx].eventsA.push(newEv); else if(plan==='B') tripData.days[dIdx].eventsB.push(newEv); else tripData.days[dIdx].eventsC.push(newEv); render(); }
     function removeEvent(dIdx, eIdx, plan) { if(plan==='A') tripData.days[dIdx].eventsA.splice(eIdx,1); else if(plan==='B') tripData.days[dIdx].eventsB.splice(eIdx,1); else tripData.days[dIdx].eventsC.splice(eIdx,1); render(); }
     function updateEvent(dIdx, eIdx, plan, key, val) { if(plan==='A') tripData.days[dIdx].eventsA[eIdx][key]=val; else if(plan==='B') tripData.days[dIdx].eventsB[eIdx][key]=val; else tripData.days[dIdx].eventsC[eIdx][key]=val; }
-    function addCheck() { tripData.checks.push({text:""}); render(); }
+    
+    // 체크리스트 추가
+    function addCheck() { 
+        // title 등의 값은 oninput으로 이미 tripData에 반영되어 있음
+        tripData.checks.push({text:"", type:"all"}); 
+        render(); 
+    }
     
     function saveWork() {
+        // 저장 시 최종 확인 (oninput이 놓친 경우 대비)
         tripData.title = document.getElementById('appTitle').value;
-        tripData.theme = document.getElementById('themeColor').value;
-        if(tripData.useMulti) { tripData.planA = document.getElementById('planAName').value; tripData.planB = document.getElementById('planBName').value; tripData.planC = document.getElementById('planCName').value; }
-        localStorage.setItem('myTripDataV3', JSON.stringify(tripData));
+        if(tripData.useMulti) {
+            tripData.planA = document.getElementById('planAName').value;
+            tripData.planB = document.getElementById('planBName').value;
+            tripData.planC = document.getElementById('planCName').value;
+        }
+        localStorage.setItem('myTripDataV4', JSON.stringify(tripData));
         alert('임시 저장 완료!');
     }
     
     window.onload = function() {
-        const saved = localStorage.getItem('myTripDataV3');
+        const saved = localStorage.getItem('myTripDataV4');
         if(saved && confirm('이전 작업을 불러올까요?')) tripData = JSON.parse(saved);
         render();
     }
