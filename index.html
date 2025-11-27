@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>여행 가이드</title>
+<title>여행 계획표</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 <style>
     /* 기본 스타일 */
@@ -189,25 +189,15 @@
         let events = [];
         let planName = "";
 
-        // 현재 모드에 맞는 이벤트 가져오기 (A는 무조건 가져오고, B나 C일 경우 덮어씌우는게 아니라 별도)
-        if(state.mode === 'B') { 
-            events = curDay.eventsB || []; 
-            planName = TRIP_DATA.planB; 
-        } else if(state.mode === 'C') { 
-            events = curDay.eventsC || []; 
-            planName = TRIP_DATA.planC; 
-        } else { 
-            events = curDay.eventsA || []; 
-            planName = TRIP_DATA.planA; 
-        }
+        if(state.mode === 'B') { events = curDay.eventsB || []; planName = TRIP_DATA.planB; }
+        else if(state.mode === 'C') { events = curDay.eventsC || []; planName = TRIP_DATA.planC; }
+        else { events = curDay.eventsA || []; planName = TRIP_DATA.planA; }
 
-        // ⭐ 핵심 로직: Plan A에 있는 "공통(isCommon)" 일정 가져와서 합치기
         if (state.mode !== 'A') {
             const commonEvents = (curDay.eventsA || []).filter(e => e.isCommon);
             events = [...events, ...commonEvents];
         }
 
-        // 시간 순 정렬
         events.sort((a, b) => a.time.localeCompare(b.time));
 
         if(TRIP_DATA.useMulti) {
@@ -279,6 +269,13 @@
         cont.innerHTML = html;
     }
 
+    // --- 통화 안전장치 추가 (safeCall) ---
+    function safeCall(val) {
+        if(confirm(val + "\n통화 연결하시겠습니까?")) {
+            location.href = 'tel:' + val;
+        }
+    }
+
     function renderInfo(cont) {
         document.getElementById('subtitle').innerText = '유용한 정보';
         if(!TRIP_DATA.infos || TRIP_DATA.infos.length === 0) {
@@ -289,7 +286,8 @@
         let html = '<div class="card"><div class="card-title">ℹ️ 여행 정보</div>';
         TRIP_DATA.infos.forEach(info => {
             const isTel = info.type === 'tel';
-            const action = isTel ? `location.href='tel:${info.val}'` : `window.open('${info.val}')`;
+            // safeCall 적용
+            const action = isTel ? `safeCall('${info.val}')` : `window.open('${info.val}')`;
             const icon = isTel ? '📞' : '🔗';
             const btnClass = isTel ? 'tel' : 'link';
             const btnText = isTel ? 'Call' : 'Go';
