@@ -2,63 +2,71 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>여행 가이드</title>
 <!-- 압축 해제 라이브러리 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 <style>
-    /* V28 디자인 스타일 그대로 유지 */
+    /* Reset */
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background-color: #f3f4f6; color: #1f2937; height: 100dvh; display: flex; justify-content: center; overflow: hidden; }
-    .app-container { width: 100%; max-width: 480px; height: 100%; background-color: #fff; display: flex; flex-direction: column; position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+    body { font-family: -apple-system, sans-serif; background: #f3f4f6; color: #1f2937; height: 100dvh; display: flex; justify-content: center; overflow: hidden; }
+    .app-container { width: 100%; max-width: 480px; height: 100%; background: #fff; display: flex; flex-direction: column; position: relative; }
     
     /* Header */
-    header { padding: 1.5rem; padding-bottom: 1.2rem; border-bottom-left-radius: 1.5rem; border-bottom-right-radius: 1.5rem; color: white; flex-shrink: 0; z-index: 30; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    header { padding: 1.5rem; padding-bottom: 1rem; color: white; transition: 0.3s; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 0 0 1.5rem 1.5rem; flex-shrink: 0; }
     header.shrink { padding: 0.8rem 1rem; border-radius: 0 0 1rem 1rem; }
-    .bg-blue { background: linear-gradient(135deg, #3b82f6, #06b6d4); }
-    .bg-pink { background: linear-gradient(135deg, #ec4899, #f43f5e); }
-    .bg-green { background: linear-gradient(135deg, #10b981, #059669); }
-    .bg-purple { background: linear-gradient(135deg, #8b5cf6, #6366f1); }
-    
-    .title { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.5rem; }
-    header.shrink .title { font-size: 1.1rem; margin-bottom: 0; }
-    .subtitle { font-size: 0.85rem; opacity: 0.9; }
-    header.shrink .subtitle { display: none; }
+    .bg-blue { background: linear-gradient(to right, #3b82f6, #06b6d4); }
+    .bg-pink { background: linear-gradient(to right, #ec4899, #f43f5e); }
+    .bg-green { background: linear-gradient(to right, #10b981, #059669); }
+    .bg-purple { background: linear-gradient(to right, #8b5cf6, #6366f1); }
 
-    /* Main */
+    .title { font-size: 1.5rem; font-weight: 800; margin-bottom: 5px; }
+    header.shrink .title { font-size: 1.1rem; margin: 0; }
+    
+    /* Multi Mode Toggle (가로 스크롤 가능) */
+    .mode-toggle { display: flex; background: rgba(0,0,0,0.15); border-radius: 99px; padding: 3px; margin-top: 10px; width: fit-content; max-width: 100%; overflow-x: auto; gap: 4px; }
+    header.shrink .mode-toggle { display: none; }
+    .mode-btn { padding: 5px 12px; border-radius: 99px; border: none; font-size: 0.85rem; font-weight: bold; cursor: pointer; color: rgba(255,255,255,0.8); background: transparent; white-space: nowrap; transition: 0.2s; }
+    .mode-btn.active { background: white; color: #333; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+    /* Content */
     main { flex: 1; overflow-y: auto; padding: 1rem; padding-bottom: 5rem; scroll-behavior: smooth; }
-    .card { background: white; border-radius: 1rem; padding: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 1rem; border: 1px solid #f3f4f6; }
+    .card { background: white; border-radius: 1rem; padding: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 1rem; border: 1px solid #f3f4f6; }
     .card-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 1rem; color: #374151; border-bottom: 2px solid #f3f4f6; padding-bottom: 0.5rem; }
-    
-    /* Tabs & Timeline */
-    .day-tabs { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 0.5rem; }
+
+    /* Day Tabs */
+    .day-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 10px; }
     .day-tabs::-webkit-scrollbar { display: none; }
-    .day-btn { flex-shrink: 0; padding: 0.4rem 1rem; border-radius: 999px; font-size: 0.9rem; font-weight: bold; border: none; cursor: pointer; transition: all 0.2s; background: #f3f4f6; color: #6b7280; }
-    .day-btn.active { background: #1f2937; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .day-btn { white-space: nowrap; padding: 8px 14px; border-radius: 99px; font-size: 0.9rem; font-weight: bold; border: none; background: #f3f4f6; color: #6b7280; cursor: pointer; }
+    .day-btn.active { background: #1f2937; color: white; }
 
-    .event-item { display: flex; gap: 1rem; margin-bottom: 1.5rem; position: relative; }
-    .event-item::before { content: ''; position: absolute; left: 19px; top: 2.5rem; bottom: -1.5rem; width: 2px; background-color: #e5e7eb; z-index: 0; }
+    /* Timeline */
+    .event-item { display: flex; gap: 12px; margin-bottom: 20px; position: relative; }
+    .event-item::before { content: ''; position: absolute; left: 19px; top: 35px; bottom: -20px; width: 2px; background: #e5e7eb; z-index: 0; }
     .event-item:last-child::before { display: none; }
-    .icon-box { width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; z-index: 1; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.05); background: #eff6ff; }
     
-    .time-badge { font-size: 0.75rem; font-weight: 700; color: #6b7280; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px; }
-    .event-title { font-size: 1rem; font-weight: 700; color: #1f2937; margin-bottom: 2px; }
-    .event-desc { font-size: 0.85rem; color: #6b7280; line-height: 1.4; white-space: pre-line; }
-    .btn-map { margin-top: 6px; display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 600; color: #2563eb; background: #eff6ff; padding: 4px 8px; border-radius: 6px; border: none; cursor: pointer; }
+    .icon-box { width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; z-index: 1; position: relative; background: #eff6ff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .type-fly { background: #dbeafe; color: #2563eb; } .type-bus { background: #dcfce7; color: #16a34a; }
+    .type-car { background: #e0e7ff; color: #4f46e5; } .type-food { background: #ffedd5; color: #ea580c; }
+    .type-beer { background: #fef9c3; color: #ca8a04; } .type-camera { background: #fce7f3; color: #db2777; }
+    .type-shop { background: #f3e8ff; color: #9333ea; } .type-bed { background: #f3f4f6; color: #4b5563; }
 
-    /* Checklist */
-    .check-item { display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem; border-bottom: 1px solid #f3f4f6; cursor: pointer; }
-    .check-box { width: 1.2rem; height: 1.2rem; border-radius: 4px; border: 2px solid #d1d5db; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem; transition: all 0.2s; }
+    .time { font-size: 0.75rem; font-weight: bold; color: #6b7280; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+    .evt-title { font-size: 1rem; font-weight: bold; color: #1f2937; margin: 2px 0; }
+    .evt-desc { font-size: 0.85rem; color: #6b7280; line-height: 1.4; white-space: pre-wrap; }
+    .btn-map { display: inline-flex; align-items: center; font-size: 0.75rem; font-weight: 600; color: #2563eb; background: #eff6ff; padding: 3px 8px; border-radius: 6px; margin-left: auto; cursor: pointer; border: none; }
+
+    /* Check & Nav */
+    .check-item { display: flex; align-items: center; gap: 10px; padding: 12px; border-bottom: 1px solid #f3f4f6; cursor: pointer; }
+    .check-box { width: 20px; height: 20px; border-radius: 4px; border: 2px solid #d1d5db; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; }
     .checked .check-box { background: #10b981; border-color: #10b981; }
     .checked span { text-decoration: line-through; color: #9ca3af; }
 
-    /* Nav */
-    nav { position: absolute; bottom: 0; width: 100%; background: white; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 0.8rem 0; padding-bottom: max(0.8rem, env(safe-area-inset-bottom)); z-index: 40; }
+    nav { position: absolute; bottom: 0; width: 100%; background: white; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 12px 0; padding-bottom: max(12px, env(safe-area-inset-bottom)); z-index: 50; }
     .nav-btn { background: none; border: none; font-size: 0.7rem; font-weight: 600; color: #9ca3af; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; width: 33%; }
     .nav-btn.active { color: #1f2937; }
     .nav-btn svg { width: 24px; height: 24px; stroke-width: 2px; }
 
-    /* Loading / Empty State */
     .empty-state { text-align: center; padding: 3rem 1rem; color: #6b7280; }
     .empty-btn { margin-top: 1rem; padding: 0.5rem 1rem; background: #3b82f6; color: white; border-radius: 0.5rem; text-decoration: none; display: inline-block; font-weight: bold; }
 </style>
@@ -68,7 +76,12 @@
 <div class="app-container">
     <header id="header" class="bg-blue">
         <div class="title" id="disp-title">여행 가이드</div>
-        <div class="subtitle" id="disp-date">즐거운 여행 되세요!</div>
+        <div id="subtitle" style="font-size:0.85rem; opacity:0.9;">즐거운 여행 되세요!</div>
+        
+        <!-- 모드 선택 (동적 생성) -->
+        <div id="mode-toggle-area" class="mode-toggle" style="display:none;">
+            <!-- 버튼이 자바스크립트로 들어갑니다 -->
+        </div>
     </header>
 
     <main id="main-scroll">
@@ -77,166 +90,204 @@
 
     <nav>
         <button onclick="setTab('sch')" class="nav-btn active" id="btn-sch">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            일정
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>일정
         </button>
         <button onclick="setTab('chk')" class="nav-btn" id="btn-chk">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-            체크
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>체크
         </button>
         <button onclick="setTab('info')" class="nav-btn" id="btn-info">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-            정보
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>정보
         </button>
     </nav>
 </div>
 
 <script>
-    // --- 1. 데이터 로드 로직 ---
-    let TRIP_CONFIG = null;
-    let state = { tab: 'sch', dayIdx: 0, checked: {} };
+    let TRIP_DATA = null;
+    let state = { tab: 'sch', dayIdx: 0, mode: 'A', checked: {} };
 
+    // --- 1. 데이터 로드 (URL Hash) ---
     function loadData() {
-        // 1. URL 해시(#data=...) 확인
         const hash = window.location.hash;
         if (hash && hash.startsWith('#data=')) {
             try {
-                const compressed = hash.substring(6); // '#data=' 제거
+                const compressed = hash.substring(6);
                 const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
-                if (jsonStr) TRIP_CONFIG = JSON.parse(jsonStr);
-            } catch (e) { console.error("데이터 파싱 실패", e); }
+                if (jsonStr) TRIP_DATA = JSON.parse(jsonStr);
+            } catch (e) { console.error("Data Load Error", e); }
         }
 
-        // 2. 데이터가 없으면 샘플/안내 표시
-        if (!TRIP_CONFIG) {
+        if (!TRIP_DATA) {
             document.getElementById('content-area').innerHTML = `
                 <div class="empty-state">
                     <div style="font-size:3rem; margin-bottom:1rem;">📂</div>
                     <h3>데이터가 없습니다.</h3>
-                    <p>관리자 페이지(builder.html)에서<br>일정을 만든 후 '앱 실행'을 눌러주세요.</p>
-                    <a href="builder.html" class="empty-btn">관리자 페이지로 이동</a>
+                    <p>builder_v3.html 에서 일정을 만든 후<br>'앱 실행'을 눌러주세요.</p>
                 </div>`;
             return false;
         }
 
-        // 3. 로컬 체크리스트 상태 복구
-        const savedChecks = localStorage.getItem('trip_checks_' + TRIP_CONFIG.title);
+        // 체크 상태 로드
+        const savedChecks = localStorage.getItem('chk_' + TRIP_DATA.title);
         if(savedChecks) state.checked = JSON.parse(savedChecks);
-
+        
         return true;
     }
 
-    // --- 2. 렌더링 로직 (V28 스타일) ---
+    // --- 2. 초기화 ---
+    function init() {
+        if(!loadData()) return;
+
+        document.getElementById('disp-title').innerText = TRIP_DATA.title;
+        document.getElementById('header').className = 'bg-' + (TRIP_DATA.theme || 'blue');
+        
+        // 멀티 플랜 버튼 생성 로직
+        const toggleArea = document.getElementById('mode-toggle-area');
+        toggleArea.innerHTML = ''; // 초기화
+
+        if(TRIP_DATA.useMulti) {
+            let html = '';
+            // Plan A (이름이 없으면 'Plan A'로 표시)
+            const nameA = TRIP_DATA.planA || 'Plan A';
+            html += `<button onclick="setMode('A')" id="btn-mode-a" class="mode-btn">${nameA}</button>`;
+            
+            // Plan B
+            if(TRIP_DATA.planB) {
+                html += `<button onclick="setMode('B')" id="btn-mode-b" class="mode-btn">${TRIP_DATA.planB}</button>`;
+            }
+            // Plan C (새로 추가된 부분!)
+            if(TRIP_DATA.planC) {
+                html += `<button onclick="setMode('C')" id="btn-mode-c" class="mode-btn">${TRIP_DATA.planC}</button>`;
+            }
+            
+            toggleArea.innerHTML = html;
+            toggleArea.style.display = 'flex';
+        } else {
+            toggleArea.style.display = 'none';
+        }
+
+        render();
+    }
+
+    // --- 3. 렌더링 ---
     function render() {
-        if (!TRIP_CONFIG) return;
-
-        // 테마 적용
-        document.getElementById('header').className = 'bg-' + (TRIP_CONFIG.theme || 'blue');
-        document.getElementById('disp-title').innerText = TRIP_CONFIG.title;
-
+        // 탭 하이라이트
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-' + state.tab).classList.add('active');
+        
         const content = document.getElementById('content-area');
         content.innerHTML = '';
 
-        // 탭 UI
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('btn-' + state.tab).classList.add('active');
-
-        if (state.tab === 'sch') renderSchedule(content);
-        else if (state.tab === 'chk') renderChecklist(content);
+        if(state.tab === 'sch') renderSchedule(content);
+        else if(state.tab === 'chk') renderChecklist(content);
         else renderInfo(content);
+
+        // 모드 버튼 스타일 활성화
+        if(TRIP_DATA.useMulti) {
+            ['A','B','C'].forEach(m => {
+                const btn = document.getElementById('btn-mode-' + m.toLowerCase());
+                if(btn) btn.className = state.mode === m ? 'mode-btn active' : 'mode-btn';
+            });
+        }
     }
 
-    function renderSchedule(container) {
-        if (!TRIP_CONFIG.days || TRIP_CONFIG.days.length === 0) {
-            container.innerHTML = '<div class="card">일정이 없습니다.</div>';
-            return;
-        }
+    function renderSchedule(cont) {
+        if(!TRIP_DATA.days.length) { cont.innerHTML = '<div class="card">일정이 없습니다.</div>'; return; }
 
         // 날짜 탭
-        let tabsHtml = '<div class="day-tabs">';
-        TRIP_CONFIG.days.forEach((day, idx) => {
-            const activeClass = idx === state.dayIdx ? 'active' : '';
-            tabsHtml += `<button onclick="setDay(${idx})" class="day-btn ${activeClass}">${day.date}</button>`;
+        let tabs = '<div class="day-tabs">';
+        TRIP_DATA.days.forEach((d, i) => {
+            tabs += `<button onclick="setDay(${i})" class="day-btn ${i===state.dayIdx?'active':''}">${d.date}</button>`;
         });
-        tabsHtml += '</div>';
+        tabs += '</div>';
 
-        // 일정 리스트
-        const currentDay = TRIP_CONFIG.days[state.dayIdx];
-        document.getElementById('disp-date').innerText = currentDay.title || (currentDay.date + " 일정");
+        const curDay = TRIP_DATA.days[state.dayIdx];
+        let events = [];
+        let planName = "";
 
-        let listHtml = '<div class="timeline">';
-        if (currentDay.events.length === 0) listHtml += '<div class="card">일정이 없습니다.</div>';
-        
-        currentDay.events.forEach(evt => {
-            const mapBtn = evt.map ? `<button onclick="openMap('${evt.map}')" class="btn-map">📍 지도</button>` : '';
-            listHtml += `
+        // 선택된 모드에 따라 이벤트 교체
+        if(state.mode === 'B') { events = curDay.eventsB; planName = TRIP_DATA.planB; }
+        else if(state.mode === 'C') { events = curDay.eventsC; planName = TRIP_DATA.planC; }
+        else { events = curDay.eventsA; planName = TRIP_DATA.planA; } // 기본 A
+
+        // 서브타이틀 업데이트
+        if(TRIP_DATA.useMulti) {
+            document.getElementById('subtitle').innerText = (planName || ('Plan '+state.mode)) + ' 일정';
+        } else {
+            document.getElementById('subtitle').innerText = curDay.title || '즐거운 여행 되세요!';
+        }
+
+        let list = '<div class="card">';
+        if(!events || events.length === 0) {
+            list += `<div style="text-align:center; padding:20px; color:#9ca3af;">일정이 없습니다.</div>`;
+        } else {
+            events.forEach(e => {
+                const mapBtn = e.map ? `<button onclick="openMap('${e.map}')" class="btn-map">📍 지도</button>` : '';
+                list += `
                 <div class="event-item">
-                    <div class="icon-box">${evt.icon}</div>
-                    <div style="flex:1; padding-top:4px;">
-                        <div style="display:flex; justify-content:space-between;">
-                            <span class="time-badge">${evt.time}</span>
+                    <div class="icon-box type-${e.type}">${e.icon}</div>
+                    <div style="flex:1;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="time">${e.time}</span>
                             ${mapBtn}
                         </div>
-                        <div class="event-title">${evt.title}</div>
-                        <div class="event-desc">${evt.desc}</div>
+                        <div class="evt-title">${e.title}</div>
+                        <div class="evt-desc">${e.desc}</div>
                     </div>
                 </div>`;
-        });
-        listHtml += '</div>';
-        container.innerHTML = tabsHtml + '<div class="card">' + listHtml + '</div>';
+            });
+        }
+        list += '</div>';
+        cont.innerHTML = tabs + list;
     }
 
-    function renderChecklist(container) {
-        document.getElementById('disp-date').innerText = "준비물 체크리스트";
-        let html = '<div class="card"><div class="card-title">👜 짐싸기 목록</div>';
-        
-        TRIP_CONFIG.checks.forEach((item, idx) => {
-            const isChecked = state.checked[idx];
+    function renderChecklist(cont) {
+        document.getElementById('subtitle').innerText = '준비물 체크리스트';
+        let html = '<div class="card"><div class="card-title">👜 짐싸기</div>';
+        (TRIP_DATA.checks || []).forEach((c, i) => {
+            const isChk = state.checked[i];
             html += `
-                <div class="check-item ${isChecked ? 'checked' : ''}" onclick="toggleCheck(${idx})">
-                    <div class="check-box">${isChecked ? '✔' : ''}</div>
-                    <span>${item.text}</span>
-                </div>`;
+            <div class="check-item ${isChk?'checked':''}" onclick="toggleCheck(${i})">
+                <div class="check-box">${isChk?'✔':''}</div>
+                <span>${c.text}</span>
+            </div>`;
         });
         html += '</div>';
-        container.innerHTML = html;
+        cont.innerHTML = html;
     }
 
-    function renderInfo(container) {
-        document.getElementById('disp-date').innerText = "유용한 정보";
-        container.innerHTML = `
-            <div class="card">
-                <div class="card-title">🆘 긴급 연락처</div>
-                <div class="check-item" onclick="location.href='tel:110'">👮‍♂️ 경찰서 (110)</div>
-                <div class="check-item" onclick="location.href='tel:119'">🚑 구급차 (119)</div>
-            </div>
-            <div class="card">
-                <div class="card-title">🔗 바로가기</div>
-                <div class="check-item" onclick="window.open('https://translate.google.com')">🗣️ 구글 번역기</div>
-                <div class="check-item" onclick="window.open('https://www.google.com/maps')">🗺️ 구글 지도</div>
-            </div>`;
+    function renderInfo(cont) {
+        document.getElementById('subtitle').innerText = '유용한 정보';
+        cont.innerHTML = `
+        <div class="card">
+            <div class="card-title">🆘 긴급 연락처</div>
+            <div class="check-item" onclick="location.href='tel:110'">👮‍♂️ 경찰서 (110)</div>
+            <div class="check-item" onclick="location.href='tel:119'">🚑 구급차 (119)</div>
+        </div>
+        <div class="card">
+            <div class="card-title">🔗 빠른 링크</div>
+            <div class="check-item" onclick="window.open('https://translate.google.com')">🗣️ 구글 번역기</div>
+            <div class="check-item" onclick="window.open('https://www.google.com/maps')">🗺️ 구글 지도</div>
+        </div>`;
     }
 
-    // --- Actions ---
+    // Actions
     window.setTab = (t) => { state.tab = t; render(); window.scrollTo(0,0); };
-    window.setDay = (idx) => { state.dayIdx = idx; render(); };
-    window.toggleCheck = (idx) => {
-        state.checked[idx] = !state.checked[idx];
-        localStorage.setItem('trip_checks_' + TRIP_CONFIG.title, JSON.stringify(state.checked));
+    window.setDay = (i) => { state.dayIdx = i; render(); };
+    window.setMode = (m) => { state.mode = m; render(); window.scrollTo(0,0); };
+    window.openMap = (q) => window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q));
+    window.toggleCheck = (i) => {
+        state.checked[i] = !state.checked[i];
+        localStorage.setItem('chk_' + TRIP_DATA.title, JSON.stringify(state.checked));
         render();
     };
-    window.openMap = (q) => { window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q)); };
 
-    // 스크롤 효과
+    // Scroll
     document.getElementById('main-scroll').addEventListener('scroll', function() {
-        const header = document.getElementById('header');
-        if (this.scrollTop > 20) header.classList.add('shrink');
-        else header.classList.remove('shrink');
+        if(this.scrollTop > 20) document.getElementById('header').classList.add('shrink');
+        else document.getElementById('header').classList.remove('shrink');
     });
 
-    // 시작
-    if(loadData()) render();
-
+    init();
 </script>
 </body>
 </html>
