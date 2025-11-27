@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>여행 가이드 빌더 V7</title>
+<title>여행 가이드 빌더 V8</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 <style>
@@ -23,17 +23,16 @@
     .plan-tab { display: flex; gap: 5px; margin-bottom: 10px; border-bottom: 2px solid #f3f4f6; padding-bottom: 10px; }
     .tab-btn { flex: 1; padding: 8px; text-align: center; border-radius: 6px; cursor: pointer; font-weight: bold; color: #6b7280; background: #f9fafb; font-size: 0.9rem; }
     
-    .tab-btn.active-common { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
     .tab-btn.active-a { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
     .tab-btn.active-b { background: #fff1f2; color: #db2777; border: 1px solid #fecdd3; }
     .tab-btn.active-c { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
 
     .event-item { background: #f9fafb; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #eee; position: relative; }
-    .event-item.plan-common { background: #fefce8; border-color: #fde047; }
+    /* 공통 체크된 항목 강조 */
+    .event-item.is-common { border-left: 4px solid #eab308; background: #fefce8; } 
     .event-item.plan-b { background: #fff1f2; border-color: #fecdd3; }
     .event-item.plan-c { background: #ecfdf5; border-color: #a7f3d0; }
     
-    /* 시간 선택 스타일 */
     .time-select-group { display: flex; align-items: center; gap: 2px; }
     .time-select { width: 48px; padding: 6px 2px; border: 1px solid #ddd; border-radius: 4px; text-align: center; }
 </style>
@@ -42,7 +41,7 @@
 
 <div class="container">
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">🧳 여행 빌더 V7</h1>
+        <h1 class="text-2xl font-bold text-gray-800">🧳 여행 빌더 V8</h1>
         <button onclick="saveWork()" class="btn btn-gray text-xs">임시 저장</button>
     </div>
 
@@ -71,7 +70,7 @@
                 <label for="chkMultiPlan" class="font-bold text-gray-800 cursor-pointer select-none">🔄 멀티 플랜(A/B 선택) 사용하기</label>
             </div>
             <div id="multiPlanInputs" class="grid grid-cols-3 gap-2" style="display:none;">
-                <div><label class="text-xs text-blue-600 font-bold">Plan A</label><input type="text" id="planAName" class="input-field" placeholder="예: 렌트카" oninput="tripData.planA=this.value"></div>
+                <div><label class="text-xs text-blue-600 font-bold">Plan A (기본)</label><input type="text" id="planAName" class="input-field" placeholder="예: 렌트카" oninput="tripData.planA=this.value"></div>
                 <div><label class="text-xs text-pink-600 font-bold">Plan B</label><input type="text" id="planBName" class="input-field" placeholder="예: 대중교통" oninput="tripData.planB=this.value"></div>
                 <div><label class="text-xs text-green-600 font-bold">Plan C</label><input type="text" id="planCName" class="input-field" placeholder="예: 택시투어" oninput="tripData.planC=this.value"></div>
             </div>
@@ -88,7 +87,7 @@
     <!-- 3. 일정 관리 -->
     <div class="card">
         <h2 class="text-xl font-bold mb-4">3. 상세 일정</h2>
-        <p class="text-sm text-gray-500 mb-4">💡 <b>[👑 공통]</b> 탭에 입력하면 모든 플랜에 자동으로 포함됩니다.</p>
+        <p class="text-sm text-gray-500 mb-4">💡 Plan A에서 <b>[👑 전체 적용]</b>을 체크하면 다른 플랜에도 자동으로 보입니다.</p>
         <div id="days-container"></div>
         <button onclick="addDay()" class="btn btn-blue w-full mt-4">+ 날짜(Day) 추가</button>
     </div>
@@ -103,20 +102,21 @@
 
 <div class="fixed bottom-0 left-0 w-full p-4 bg-white border-t shadow-lg z-50">
     <div class="container flex gap-2">
-        <button onclick="openApp()" class="btn btn-green flex-1">🚀 앱 실행 (index.html 연결)</button>
+        <button onclick="openApp()" class="btn btn-green flex-1">🚀 계획표 생성</button>
         <button onclick="copyLink()" class="btn btn-dark w-24">🔗 복사</button>
     </div>
 </div>
 
 <script>
+    // --- 데이터 구조 ---
     let tripData = {
         title: "나만의 여행", theme: "blue", useMulti: false,
         planA: "", planB: "", planC: "",
         checks: [{text:"", type:"all"}],
         days: [{ 
             date: "1일차", title: "", 
-            eventsCommon: [{time:"09:00", icon:"✈️", type:"fly", title:"공항 도착", desc:"입국심사", map:""}], 
-            eventsA: [], eventsB: [], eventsC: [] 
+            eventsA: [{time:"10:00", icon:"✈️", type:"fly", title:"공항 도착", desc:"입국심사", map:"", isCommon: true}], // isCommon 속성 추가
+            eventsB: [], eventsC: [] 
         }],
         infos: [{ label: "경찰서 (110)", val: "110", type: "tel" }]
     };
@@ -127,7 +127,7 @@
         {v:"camera", l:"📷관광"}, {v:"shop", l:"🛍️쇼핑"}, {v:"bed", l:"🛏️숙소"}, {v:"map", l:"📍장소"}
     ];
 
-    // 시간 옵션 생성 (00~23)
+    // 시간 옵션 생성
     function getHourOpts(selected) {
         let html = '';
         for(let i=0; i<24; i++) {
@@ -136,7 +136,6 @@
         }
         return html;
     }
-    // 분 옵션 생성 (00~55, 5분 단위)
     function getMinOpts(selected) {
         let html = '';
         for(let i=0; i<60; i+=5) {
@@ -175,11 +174,10 @@
         const dCont = document.getElementById('days-container');
         dCont.innerHTML = '';
         tripData.days.forEach((d, dIdx) => {
-            const activeTab = d._activeTab || (tripData.useMulti ? 'Common' : 'A');
+            const activeTab = d._activeTab || 'A';
             const nameA = tripData.useMulti ? (tripData.planA || 'Plan A') : '상세 일정';
 
             let tabHtml = `<div class="plan-tab">`;
-            if(tripData.useMulti) tabHtml += `<div class="tab-btn ${activeTab==='Common'?'active-common':''}" onclick="switchDayTab(${dIdx}, 'Common')">👑 공통</div>`;
             tabHtml += `<div class="tab-btn ${activeTab==='A'?'active-a':''}" onclick="switchDayTab(${dIdx}, 'A')">${nameA}</div>`;
             if(tripData.useMulti) {
                 tabHtml += `<div class="tab-btn ${activeTab==='B'?'active-b':''}" onclick="switchDayTab(${dIdx}, 'B')">${tripData.planB||'Plan B'}</div>`;
@@ -196,7 +194,6 @@
                     <button class="btn btn-red h-8 ml-2" onclick="removeDay(${dIdx})">삭제</button>
                 </div>
                 ${tabHtml}
-                <div style="display:${activeTab==='Common'?'block':'none'}">${renderEvents(d.eventsCommon, dIdx, 'Common')}<button class="w-full py-2 border-2 border-dashed border-yellow-400 text-yellow-600 rounded text-sm hover:bg-yellow-50" onclick="addEvent(${dIdx}, 'Common')">+ 공통 일정 추가</button></div>
                 <div style="display:${activeTab==='A'?'block':'none'}">${renderEvents(d.eventsA, dIdx, 'A')}<button class="w-full py-2 border-2 border-dashed border-blue-200 text-blue-500 rounded text-sm hover:bg-blue-50" onclick="addEvent(${dIdx}, 'A')">+ ${nameA} 추가</button></div>
                 <div style="display:${activeTab==='B'?'block':'none'}">${renderEvents(d.eventsB, dIdx, 'B')}<button class="w-full py-2 border-2 border-dashed border-pink-200 text-pink-500 rounded text-sm hover:bg-pink-50" onclick="addEvent(${dIdx}, 'B')">+ 추가</button></div>
                 <div style="display:${activeTab==='C'?'block':'none'}">${renderEvents(d.eventsC, dIdx, 'C')}<button class="w-full py-2 border-2 border-dashed border-green-200 text-green-500 rounded text-sm hover:bg-green-50" onclick="addEvent(${dIdx}, 'C')">+ 추가</button></div>
@@ -216,78 +213,77 @@
 
     function renderEvents(events, dIdx, planType) {
         if(!events) return '';
-        let typeClass = planType === 'Common' ? 'plan-common' : (planType === 'B' ? 'plan-b' : (planType === 'C' ? 'plan-c' : ''));
+        let typeClass = planType === 'B' ? 'plan-b' : (planType === 'C' ? 'plan-c' : '');
         
         return events.map((e, eIdx) => {
             let opts = iconOpts.map(o => `<option value="${o.v}" ${e.type===o.v?'selected':''}>${o.l}</option>`).join('');
-            
-            // 시간 파싱 (HH:MM)
             let [hh, mm] = (e.time || "09:00").split(':');
             
+            // 공통 체크박스 (Plan A에만 표시)
+            let commonCheck = '';
+            let rowClass = typeClass;
+            
+            if(planType === 'A' && tripData.useMulti) {
+                if(e.isCommon) rowClass += ' is-common';
+                commonCheck = `
+                <div class="flex items-center gap-1 mt-1 ml-1">
+                    <input type="checkbox" id="chk-com-${dIdx}-${eIdx}" ${e.isCommon?'checked':''} onchange="updateEvent(${dIdx}, ${eIdx}, 'A', 'isCommon', this.checked)">
+                    <label for="chk-com-${dIdx}-${eIdx}" class="text-xs font-bold text-yellow-600 cursor-pointer select-none">👑 다른 플랜에도 적용</label>
+                </div>`;
+            }
+
             return `
-            <div class="event-item ${typeClass}">
+            <div class="event-item ${rowClass}">
                 <button class="absolute top-2 right-2 text-red-400 text-xs font-bold" onclick="removeEvent(${dIdx}, ${eIdx}, '${planType}')">X</button>
                 <div class="flex gap-2 mb-1 items-center">
-                    <!-- 시간 선택기 -->
                     <div class="time-select-group">
                         <select class="time-select" onchange="updateTime(${dIdx}, ${eIdx}, '${planType}', 'h', this.value)">${getHourOpts(hh)}</select>
                         <span>:</span>
                         <select class="time-select" onchange="updateTime(${dIdx}, ${eIdx}, '${planType}', 'm', this.value)">${getMinOpts(mm)}</select>
                     </div>
-                    
                     <select class="input-field w-24" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'type', this.value); updateEvent(${dIdx}, ${eIdx}, '${planType}', 'icon', this.options[this.selectedIndex].text.substring(0,2))">${opts}</select>
                     <input class="input-field flex-1" value="${e.title}" placeholder="제목" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'title', this.value)">
                 </div>
                 <input class="input-field text-sm mb-1" value="${e.desc}" placeholder="설명" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'desc', this.value)">
                 <div class="relative"><input class="input-field text-sm" value="${e.map||''}" placeholder="구글맵 검색어" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'map', this.value)"></div>
+                ${commonCheck}
             </div>`;
         }).join('');
     }
 
-    // --- 데이터 조작 ---
     function updateDay(idx, key, val) { tripData.days[idx][key] = val; }
     function removeDay(idx) { if(confirm('삭제합니까?')) { tripData.days.splice(idx, 1); render(); } }
-    function addDay() { tripData.days.push({date:"Day "+(tripData.days.length+1), title:"", eventsCommon:[], eventsA:[], eventsB:[], eventsC:[]}); render(); }
+    function addDay() { tripData.days.push({date:"Day "+(tripData.days.length+1), title:"", eventsA:[], eventsB:[], eventsC:[]}); render(); }
     function switchDayTab(dIdx, tab) { tripData.days[dIdx]._activeTab = tab; render(); }
     
     function addEvent(dIdx, plan) { 
-        const newEv = {time:"09:00", type:"map", icon:"📍", title:"", desc:"", map:""};
-        if(plan === 'Common') { if(!tripData.days[dIdx].eventsCommon) tripData.days[dIdx].eventsCommon=[]; tripData.days[dIdx].eventsCommon.push(newEv); }
-        else if(plan === 'A') tripData.days[dIdx].eventsA.push(newEv);
+        const newEv = {time:"09:00", type:"map", icon:"📍", title:"", desc:"", map:"", isCommon: false};
+        if(plan === 'A') tripData.days[dIdx].eventsA.push(newEv);
         else if(plan === 'B') tripData.days[dIdx].eventsB.push(newEv);
         else tripData.days[dIdx].eventsC.push(newEv);
         render();
     }
     
     function removeEvent(dIdx, eIdx, plan) {
-        if(plan === 'Common') tripData.days[dIdx].eventsCommon.splice(eIdx, 1);
-        else if(plan === 'A') tripData.days[dIdx].eventsA.splice(eIdx, 1);
+        if(plan === 'A') tripData.days[dIdx].eventsA.splice(eIdx, 1);
         else if(plan === 'B') tripData.days[dIdx].eventsB.splice(eIdx, 1);
         else tripData.days[dIdx].eventsC.splice(eIdx, 1);
         render();
     }
     
     function updateEvent(dIdx, eIdx, plan, key, val) {
-        if(plan === 'Common') tripData.days[dIdx].eventsCommon[eIdx][key] = val;
-        else if(plan === 'A') tripData.days[dIdx].eventsA[eIdx][key] = val;
+        if(plan === 'A') tripData.days[dIdx].eventsA[eIdx][key] = val;
         else if(plan === 'B') tripData.days[dIdx].eventsB[eIdx][key] = val;
         else tripData.days[dIdx].eventsC[eIdx][key] = val;
+        if(key === 'isCommon') render(); // 체크박스 변경 시 스타일 즉시 반영을 위해 리렌더링
     }
 
-    // 시간 업데이트 (시/분 합쳐서 time 필드에 저장)
     function updateTime(dIdx, eIdx, plan, part, val) {
-        let targetArr = (plan === 'Common') ? tripData.days[dIdx].eventsCommon : 
-                        (plan === 'A') ? tripData.days[dIdx].eventsA :
-                        (plan === 'B') ? tripData.days[dIdx].eventsB : tripData.days[dIdx].eventsC;
-        
+        let targetArr = (plan === 'A') ? tripData.days[dIdx].eventsA : (plan === 'B') ? tripData.days[dIdx].eventsB : tripData.days[dIdx].eventsC;
         let current = targetArr[eIdx].time || "09:00";
         let [hh, mm] = current.split(':');
-        
-        if(part === 'h') hh = val;
-        else mm = val;
-        
+        if(part === 'h') hh = val; else mm = val;
         targetArr[eIdx].time = `${hh}:${mm}`;
-        // 시간 순 정렬은 뷰어에서 하므로 여기선 저장만 함
     }
     
     function addCheck() { tripData.checks.push({text:"", type:"all"}); render(); }
@@ -300,12 +296,12 @@
             tripData.planB = document.getElementById('planBName').value;
             tripData.planC = document.getElementById('planCName').value;
         }
-        localStorage.setItem('myTripDataV7', JSON.stringify(tripData)); // V7 저장소
+        localStorage.setItem('myTripDataV8', JSON.stringify(tripData));
         alert('저장되었습니다!');
     }
     
     window.onload = function() {
-        const saved = localStorage.getItem('myTripDataV7');
+        const saved = localStorage.getItem('myTripDataV8');
         if(saved && confirm('이전 작업을 불러올까요?')) tripData = JSON.parse(saved);
         render();
     }
