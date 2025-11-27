@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>여행 가이드 빌더 V4</title>
+<title>여행 계획 빌더</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 <style>
@@ -16,7 +16,6 @@
     .btn-green { background: #10b981; width: 100%; padding: 15px; font-size: 1.1rem; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
     .btn-red { background: #ef4444; font-size: 0.75rem; padding: 4px 8px; }
     .btn-gray { background: #6b7280; }
-    .btn-dark { background: #374151; }
     
     .day-block { border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 20px; background: #fff; }
     .plan-tab { display: flex; gap: 5px; margin-bottom: 10px; border-bottom: 2px solid #f3f4f6; padding-bottom: 10px; }
@@ -34,7 +33,7 @@
 
 <div class="container">
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">🧳 여행 빌더 V4</h1>
+        <h1 class="text-2xl font-bold text-gray-800">🧳 여행 빌더 V5</h1>
         <button onclick="saveWork()" class="btn btn-gray text-xs">임시 저장</button>
     </div>
 
@@ -44,8 +43,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="font-bold text-sm text-gray-600">여행 제목</label>
-                <!-- 입력 즉시 데이터 업데이트 (초기화 방지) -->
-                <input type="text" id="appTitle" class="input-field" oninput="tripData.title=this.value" placeholder="여행 제목 입력">
+                <input type="text" id="appTitle" class="input-field" oninput="tripData.title=this.value" placeholder="예: 다낭 가족여행">
             </div>
             <div>
                 <label class="font-bold text-sm text-gray-600">테마 색상</label>
@@ -74,7 +72,6 @@
     <!-- 2. 체크리스트 -->
     <div class="card">
         <h2 class="text-xl font-bold mb-4">2. 체크리스트</h2>
-        <p class="text-sm text-gray-500 mb-2">💡 항목별로 어떤 플랜에 보여줄지 선택하세요.</p>
         <div id="check-list"></div>
         <button onclick="addCheck()" class="btn btn-blue text-sm mt-2">+ 항목 추가</button>
     </div>
@@ -84,6 +81,14 @@
         <h2 class="text-xl font-bold mb-4">3. 상세 일정</h2>
         <div id="days-container"></div>
         <button onclick="addDay()" class="btn btn-blue w-full mt-4">+ 날짜(Day) 추가</button>
+    </div>
+
+    <!-- 4. 정보 탭 관리 (NEW!) -->
+    <div class="card">
+        <h2 class="text-xl font-bold mb-4">4. 유용한 정보 (Info 탭)</h2>
+        <p class="text-sm text-gray-500 mb-2">💡 긴급 연락처나 링크를 자유롭게 추가하세요.</p>
+        <div id="info-list"></div>
+        <button onclick="addInfo()" class="btn btn-blue text-sm mt-2">+ 정보 추가</button>
     </div>
 </div>
 
@@ -99,9 +104,14 @@
     let tripData = {
         title: "나만의 여행", theme: "blue", useMulti: false,
         planA: "", planB: "", planC: "",
-        // checks 구조 변경: text와 type(누구에게 보여줄지)
         checks: [{text:"", type:"all"}],
-        days: [{ date: "1일차", title: "", eventsA: [{time:"10:00", icon:"✈️", type:"fly", title:"공항 도착", desc:"", map:""}], eventsB: [], eventsC: [] }]
+        days: [{ date: "1일차", title: "", eventsA: [{time:"10:00", icon:"✈️", type:"fly", title:"공항 도착", desc:"", map:""}], eventsB: [], eventsC: [] }],
+        // 기본 정보 (사용자가 수정 가능)
+        infos: [
+            { label: "경찰서 (110)", val: "110", type: "tel" },
+            { label: "구급차 (119)", val: "119", type: "tel" },
+            { label: "구글 번역기", val: "https://translate.google.com", type: "link" }
+        ]
     };
 
     const iconOpts = [
@@ -112,68 +122,47 @@
 
     function toggleMultiPlan() {
         tripData.useMulti = document.getElementById('chkMultiPlan').checked;
-        // 입력창 표시 제어
-        const multiInputs = document.getElementById('multiPlanInputs');
-        multiInputs.style.display = tripData.useMulti ? 'grid' : 'none';
+        document.getElementById('multiPlanInputs').style.display = tripData.useMulti ? 'grid' : 'none';
         render(); 
     }
 
     function render() {
-        // 1. 입력값 복구 (데이터 -> 화면)
+        // 1. 기본설정
         document.getElementById('appTitle').value = tripData.title;
         document.getElementById('themeColor').value = tripData.theme;
         document.getElementById('chkMultiPlan').checked = tripData.useMulti;
-        
-        const multiInputs = document.getElementById('multiPlanInputs');
-        if(tripData.useMulti) {
-            multiInputs.style.display = 'grid';
-            document.getElementById('planAName').value = tripData.planA;
-            document.getElementById('planBName').value = tripData.planB;
-            document.getElementById('planCName').value = tripData.planC;
-        } else {
-            multiInputs.style.display = 'none';
-        }
+        document.getElementById('multiPlanInputs').style.display = tripData.useMulti ? 'grid' : 'none';
+        document.getElementById('planAName').value = tripData.planA;
+        document.getElementById('planBName').value = tripData.planB;
+        document.getElementById('planCName').value = tripData.planC;
 
-        // 2. 체크리스트 렌더링 (구조 변경됨)
+        // 2. 체크리스트
         const cList = document.getElementById('check-list');
         cList.innerHTML = '';
         tripData.checks.forEach((c, i) => {
-            // 플랜 선택 옵션
             let typeOpts = `<option value="all">공통</option>`;
             if(tripData.useMulti) {
-                typeOpts += `<option value="A">Plan A 만</option>`;
-                typeOpts += `<option value="B">Plan B 만</option>`;
-                typeOpts += `<option value="C">Plan C 만</option>`;
+                typeOpts += `<option value="A">Plan A 만</option><option value="B">Plan B 만</option><option value="C">Plan C 만</option>`;
             }
-
             cList.innerHTML += `
                 <div class="flex gap-2 mb-2">
                     <input class="input-field flex-1" value="${c.text}" placeholder="준비물 입력" oninput="tripData.checks[${i}].text=this.value">
-                    <select class="input-field w-28" onchange="tripData.checks[${i}].type=this.value" style="font-size:0.8rem;">
-                        ${typeOpts}
-                    </select>
+                    <select class="input-field w-28" onchange="tripData.checks[${i}].type=this.value" style="font-size:0.8rem;">${typeOpts}</select>
                     <button class="btn btn-red" onclick="tripData.checks.splice(${i},1); render();">삭제</button>
                 </div>`;
-            // Select 값 복구
-            const selects = cList.querySelectorAll('select');
-            if(selects[i]) selects[i].value = c.type || 'all';
+            cList.querySelectorAll('select')[i].value = c.type || 'all';
         });
 
-        // 3. 일정 렌더링
+        // 3. 일정
         const dCont = document.getElementById('days-container');
         dCont.innerHTML = '';
-        
         tripData.days.forEach((d, dIdx) => {
             const activeTab = d._activeTab || 'A';
             const nameA = tripData.useMulti ? (tripData.planA || 'Plan A') : '상세 일정';
-            const nameB = tripData.planB || 'Plan B';
-            const nameC = tripData.planC || 'Plan C';
-
-            let tabHtml = `<div class="plan-tab">`;
-            tabHtml += `<div class="tab-btn ${activeTab==='A'?'active-a':''}" onclick="switchDayTab(${dIdx}, 'A')">${nameA}</div>`;
+            let tabHtml = `<div class="plan-tab"><div class="tab-btn ${activeTab==='A'?'active-a':''}" onclick="switchDayTab(${dIdx}, 'A')">${nameA}</div>`;
             if(tripData.useMulti) {
-                tabHtml += `<div class="tab-btn ${activeTab==='B'?'active-b':''}" onclick="switchDayTab(${dIdx}, 'B')">${nameB}</div>`;
-                tabHtml += `<div class="tab-btn ${activeTab==='C'?'active-c':''}" onclick="switchDayTab(${dIdx}, 'C')">${nameC}</div>`;
+                tabHtml += `<div class="tab-btn ${activeTab==='B'?'active-b':''}" onclick="switchDayTab(${dIdx}, 'B')">${tripData.planB||'Plan B'}</div>`;
+                tabHtml += `<div class="tab-btn ${activeTab==='C'?'active-c':''}" onclick="switchDayTab(${dIdx}, 'C')">${tripData.planC||'Plan C'}</div>`;
             }
             tabHtml += `</div>`;
 
@@ -192,6 +181,24 @@
             `;
             dCont.appendChild(div);
         });
+
+        // 4. 정보 (NEW)
+        const iCont = document.getElementById('info-list');
+        iCont.innerHTML = '';
+        if(!tripData.infos) tripData.infos = []; // 구버전 데이터 호환
+        tripData.infos.forEach((info, i) => {
+            iCont.innerHTML += `
+                <div class="flex gap-2 mb-2 items-center bg-gray-50 p-2 rounded border">
+                    <select class="input-field w-24" onchange="tripData.infos[${i}].type=this.value">
+                        <option value="tel">📞 전화</option>
+                        <option value="link">🔗 링크</option>
+                    </select>
+                    <input class="input-field w-1/3" value="${info.label}" placeholder="이름 (예: 경찰서)" oninput="tripData.infos[${i}].label=this.value">
+                    <input class="input-field flex-1" value="${info.val}" placeholder="번호 또는 URL" oninput="tripData.infos[${i}].val=this.value">
+                    <button class="btn btn-red" onclick="tripData.infos.splice(${i},1); render();">X</button>
+                </div>`;
+            iCont.querySelectorAll('select')[i].value = info.type;
+        });
     }
 
     function renderEvents(events, dIdx, planType) {
@@ -199,7 +206,20 @@
         let typeClass = planType === 'B' ? 'plan-b' : (planType === 'C' ? 'plan-c' : '');
         return events.map((e, eIdx) => {
             let opts = iconOpts.map(o => `<option value="${o.v}" ${e.type===o.v?'selected':''}>${o.l}</option>`).join('');
-            return `<div class="event-item ${typeClass}"><button class="absolute top-2 right-2 text-red-400 text-xs font-bold" onclick="removeEvent(${dIdx}, ${eIdx}, '${planType}')">X</button><div class="flex gap-2 mb-1"><input class="input-field w-20" value="${e.time}" placeholder="시간" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'time', this.value)"><select class="input-field w-24" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'type', this.value); updateEvent(${dIdx}, ${eIdx}, '${planType}', 'icon', this.options[this.selectedIndex].text.substring(0,2))">${opts}</select><input class="input-field" value="${e.title}" placeholder="제목" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'title', this.value)"></div><input class="input-field text-sm mb-1" value="${e.desc}" placeholder="설명" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'desc', this.value)"><input class="input-field text-sm" value="${e.map||''}" placeholder="지도 검색어" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'map', this.value)"></div>`;
+            return `
+            <div class="event-item ${typeClass}">
+                <button class="absolute top-2 right-2 text-red-400 text-xs font-bold" onclick="removeEvent(${dIdx}, ${eIdx}, '${planType}')">X</button>
+                <div class="flex gap-2 mb-1">
+                    <input class="input-field w-20" value="${e.time}" placeholder="시간" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'time', this.value)">
+                    <select class="input-field w-24" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'type', this.value); updateEvent(${dIdx}, ${eIdx}, '${planType}', 'icon', this.options[this.selectedIndex].text.substring(0,2))">${opts}</select>
+                    <input class="input-field" value="${e.title}" placeholder="제목" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'title', this.value)">
+                </div>
+                <input class="input-field text-sm mb-1" value="${e.desc}" placeholder="설명" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'desc', this.value)">
+                <div class="relative">
+                    <input class="input-field text-sm" value="${e.map||''}" placeholder="구글맵 검색어 (예: 오사카 성)" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'map', this.value)">
+                    <p class="text-xs text-gray-400 mt-1">※ 입력 시 앱에 '구글맵' 버튼이 생성됩니다.</p>
+                </div>
+            </div>`;
         }).join('');
     }
 
@@ -212,27 +232,22 @@
     function removeEvent(dIdx, eIdx, plan) { if(plan==='A') tripData.days[dIdx].eventsA.splice(eIdx,1); else if(plan==='B') tripData.days[dIdx].eventsB.splice(eIdx,1); else tripData.days[dIdx].eventsC.splice(eIdx,1); render(); }
     function updateEvent(dIdx, eIdx, plan, key, val) { if(plan==='A') tripData.days[dIdx].eventsA[eIdx][key]=val; else if(plan==='B') tripData.days[dIdx].eventsB[eIdx][key]=val; else tripData.days[dIdx].eventsC[eIdx][key]=val; }
     
-    // 체크리스트 추가
-    function addCheck() { 
-        // title 등의 값은 oninput으로 이미 tripData에 반영되어 있음
-        tripData.checks.push({text:"", type:"all"}); 
-        render(); 
-    }
+    function addCheck() { tripData.checks.push({text:"", type:"all"}); render(); }
+    function addInfo() { tripData.infos.push({label:"", val:"", type:"link"}); render(); }
     
     function saveWork() {
-        // 저장 시 최종 확인 (oninput이 놓친 경우 대비)
         tripData.title = document.getElementById('appTitle').value;
         if(tripData.useMulti) {
             tripData.planA = document.getElementById('planAName').value;
             tripData.planB = document.getElementById('planBName').value;
             tripData.planC = document.getElementById('planCName').value;
         }
-        localStorage.setItem('myTripDataV4', JSON.stringify(tripData));
-        alert('임시 저장 완료!');
+        localStorage.setItem('myTripDataV5', JSON.stringify(tripData));
+        alert('저장되었습니다!');
     }
     
     window.onload = function() {
-        const saved = localStorage.getItem('myTripDataV4');
+        const saved = localStorage.getItem('myTripDataV5');
         if(saved && confirm('이전 작업을 불러올까요?')) tripData = JSON.parse(saved);
         render();
     }
