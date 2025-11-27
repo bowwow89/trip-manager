@@ -3,10 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>여행 계획</title>
+<title>여행 가이드</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 <style>
-    /* 기본 스타일 */
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f3f4f6; color: #1f2937; height: 100dvh; display: flex; justify-content: center; overflow: hidden; }
     .app-container { width: 100%; max-width: 480px; height: 100%; background-color: #fff; display: flex; flex-direction: column; position: relative; }
@@ -57,7 +56,6 @@
     .checked span { text-decoration: line-through; color: #9ca3af; }
     .check-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; background: #f3f4f6; color: #6b7280; font-weight: bold; margin-left: auto; }
 
-    /* 정보 탭 아이템 */
     .info-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #f3f4f6; cursor: pointer; text-decoration: none; color: inherit; }
     .info-item:active { background-color: #f9fafb; }
     .info-label { font-weight: 600; font-size: 0.95rem; color: #374151; display: flex; align-items: center; gap: 8px; }
@@ -76,8 +74,6 @@
     .nav-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px dashed #e5e7eb; }
     .nav-control-btn { font-size: 0.875rem; font-weight: bold; color: #6b7280; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 8px; }
     .btn-top { background: #f3f4f6; padding: 8px; border-radius: 50%; }
-
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 </head>
 <body>
@@ -192,9 +188,19 @@
         let events = [];
         let planName = "";
 
-        if(state.mode === 'B') { events = curDay.eventsB; planName = TRIP_DATA.planB; }
-        else if(state.mode === 'C') { events = curDay.eventsC; planName = TRIP_DATA.planC; }
-        else { events = curDay.eventsA; planName = TRIP_DATA.planA; }
+        if(state.mode === 'B') { events = curDay.eventsB || []; planName = TRIP_DATA.planB; }
+        else if(state.mode === 'C') { events = curDay.eventsC || []; planName = TRIP_DATA.planC; }
+        else { events = curDay.eventsA || []; planName = TRIP_DATA.planA; }
+
+        // ⭐ 공통 일정(common)과 합치기
+        if(curDay.eventsCommon && curDay.eventsCommon.length > 0) {
+            events = [...curDay.eventsCommon, ...events];
+        }
+
+        // ⭐ 시간 순서대로 정렬 (Time Sort)
+        events.sort((a, b) => {
+            return a.time.localeCompare(b.time);
+        });
 
         if(TRIP_DATA.useMulti) {
             document.getElementById('subtitle').innerText = (planName || ('Plan '+state.mode)) + ' 일정';
@@ -265,11 +271,8 @@
         cont.innerHTML = html;
     }
 
-    // --- 정보 탭 (Dynamic Rendering) ---
     function renderInfo(cont) {
         document.getElementById('subtitle').innerText = '유용한 정보';
-        
-        // 데이터가 없으면 기본 안내 표시
         if(!TRIP_DATA.infos || TRIP_DATA.infos.length === 0) {
             cont.innerHTML = '<div class="card"><div style="text-align:center; padding:2rem; color:#9ca3af;">등록된 정보가 없습니다.</div></div>';
             return;
