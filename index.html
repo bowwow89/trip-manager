@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>여행 계획표</title>
+<title>여행 가이드</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 <style>
     /* 기본 스타일 */
@@ -36,17 +36,24 @@
     .day-btn { white-space: nowrap; padding: 8px 14px; border-radius: 99px; font-size: 0.9rem; font-weight: bold; border: none; background: #f3f4f6; color: #6b7280; cursor: pointer; transition: 0.2s; }
     .day-btn.active { background: #1f2937; color: white; transform: scale(1.05); }
 
-    .event-item { display: flex; gap: 12px; margin-bottom: 20px; position: relative; animation: fadeIn 0.3s ease-out; }
-    .event-item::before { content: ''; position: absolute; left: 19px; top: 35px; bottom: -20px; width: 2px; background: #e5e7eb; z-index: 0; }
+    .event-item { display: flex; gap: 12px; margin-bottom: 20px; position: relative; animation: fadeIn 0.3s ease-out; background: white; padding: 10px; border-radius: 12px; border: 1px solid #eee; }
+    
+    /* ⭐ 플랜별 색상 구분 (뷰어용) */
+    .event-item.is-common { background-color: #fffbeb; border-left: 4px solid #f59e0b; } /* 공통: 노랑 */
+    .event-item.plan-a { background-color: #eff6ff; border-left: 4px solid #3b82f6; } /* A: 파랑 */
+    .event-item.plan-b { background-color: #fff1f2; border-left: 4px solid #ec4899; } /* B: 핑크 */
+    .event-item.plan-c { background-color: #ecfdf5; border-left: 4px solid #10b981; } /* C: 초록 */
+
+    .event-item::before { content: ''; position: absolute; left: 29px; top: 35px; bottom: -20px; width: 2px; background: #e5e7eb; z-index: 0; }
     .event-item:last-child::before { display: none; }
     
-    .icon-box { width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; z-index: 1; position: relative; background: #eff6ff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .type-fly { background: #dbeafe; color: #2563eb; } .type-bus { background: #dcfce7; color: #16a34a; }
-    .type-car { background: #e0e7ff; color: #4f46e5; } .type-food { background: #ffedd5; color: #ea580c; }
-    .type-beer { background: #fef9c3; color: #ca8a04; } .type-camera { background: #fce7f3; color: #db2777; }
-    .type-shop { background: #f3e8ff; color: #9333ea; } .type-bed { background: #f3f4f6; color: #4b5563; }
+    .icon-box { width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; z-index: 1; position: relative; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .type-fly { color: #2563eb; } .type-bus { color: #16a34a; }
+    .type-car { color: #4f46e5; } .type-food { color: #ea580c; }
+    .type-beer { color: #ca8a04; } .type-camera { color: #db2777; }
+    .type-shop { color: #9333ea; } .type-bed { color: #4b5563; }
 
-    .time { font-size: 0.75rem; font-weight: bold; color: #6b7280; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+    .time { font-size: 0.75rem; font-weight: bold; color: #6b7280; background: rgba(255,255,255,0.8); padding: 2px 6px; border-radius: 4px; }
     .evt-title { font-size: 1rem; font-weight: bold; color: #1f2937; margin: 2px 0; }
     .evt-desc { font-size: 0.85rem; color: #6b7280; line-height: 1.4; white-space: pre-wrap; }
     .btn-map { display: inline-flex; align-items: center; font-size: 0.75rem; font-weight: 600; color: #2563eb; background: #eff6ff; padding: 3px 8px; border-radius: 6px; margin-left: auto; cursor: pointer; border: none; text-decoration: none; }
@@ -107,13 +114,39 @@
     let TRIP_DATA = null;
     let state = { tab: 'sch', dayIdx: 0, mode: 'A', checked: {} };
 
+    // 압축 해제 함수
+    function expandData(minified) {
+        if(!minified) return null;
+        if(minified.title) return minified; // 구버전 호환
+
+        return {
+            title: minified.t, theme: minified.th, useMulti: minified.um,
+            planA: minified.pa, planB: minified.pb, planC: minified.pc,
+            checks: (minified.ck || []).map(c => ({text:c.x, type:c.y})),
+            infos: (minified.if || []).map(i => ({label:i.l, val:i.v, type:i.y})),
+            days: (minified.ds || []).map(d => ({
+                date: d.d, title: d.t,
+                eventsA: (d.ea || []).map(e => ({time:e.t, type:e.y, icon:e.i, title:e.l, desc:e.d, map:e.m, isCommon:e.c===1})),
+                eventsB: (d.eb || []).map(e => ({time:e.t, type:e.y, icon:e.i, title:e.l, desc:e.d, map:e.m})),
+                eventsC: (d.ecp || []).map(e => ({time:e.t, type:e.y, icon:e.i, title:e.l, desc:e.d, map:e.m}))
+            }))
+        };
+    }
+
     function loadData() {
         const hash = window.location.hash;
-        if (hash && hash.startsWith('#data=')) {
+        if (hash) {
             try {
-                const compressed = hash.substring(6);
-                const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
-                if (jsonStr) TRIP_DATA = JSON.parse(jsonStr);
+                let compressed = '';
+                if(hash.startsWith('#d=')) {
+                    compressed = hash.substring(3); 
+                    const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
+                    TRIP_DATA = expandData(JSON.parse(jsonStr));
+                } else if(hash.startsWith('#data=')) {
+                    compressed = hash.substring(6); 
+                    const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
+                    TRIP_DATA = JSON.parse(jsonStr);
+                }
             } catch (e) { console.error("Data Load Error", e); }
         }
 
@@ -212,8 +245,15 @@
         } else {
             events.forEach(e => {
                 const mapBtn = e.map ? `<button onclick="openMap('${e.map}')" class="btn-map">📍 구글맵</button>` : '';
+                
+                // ⭐ 여기서 플랜별 색상 클래스 부여
+                let planClass = 'plan-a'; // 기본 A
+                if(e.isCommon) planClass = 'is-common';
+                else if(state.mode === 'B') planClass = 'plan-b';
+                else if(state.mode === 'C') planClass = 'plan-c';
+
                 list += `
-                <div class="event-item">
+                <div class="event-item ${planClass}">
                     <div class="icon-box type-${e.type}">${e.icon}</div>
                     <div style="flex:1;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -269,7 +309,6 @@
         cont.innerHTML = html;
     }
 
-    // --- 통화 안전장치 추가 (safeCall) ---
     function safeCall(val) {
         if(confirm(val + "\n통화 연결하시겠습니까?")) {
             location.href = 'tel:' + val;
@@ -286,7 +325,6 @@
         let html = '<div class="card"><div class="card-title">ℹ️ 여행 정보</div>';
         TRIP_DATA.infos.forEach(info => {
             const isTel = info.type === 'tel';
-            // safeCall 적용
             const action = isTel ? `safeCall('${info.val}')` : `window.open('${info.val}')`;
             const icon = isTel ? '📞' : '🔗';
             const btnClass = isTel ? 'tel' : 'link';
