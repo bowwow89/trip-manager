@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>여행 계획표</title>
+<title>여행 가이드</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 <style>
     /* 기본 스타일 */
@@ -107,40 +107,13 @@
     let TRIP_DATA = null;
     let state = { tab: 'sch', dayIdx: 0, mode: 'A', checked: {} };
 
-    // --- 데이터 압축 해제 (Unminify) ---
-    function expandData(minified) {
-        if(!minified) return null;
-        // 구버전(minified 안 된) 데이터가 들어올 경우 대비
-        if(minified.title) return minified;
-
-        return {
-            title: minified.t, theme: minified.th, useMulti: minified.um,
-            planA: minified.pa, planB: minified.pb, planC: minified.pc,
-            checks: (minified.ck || []).map(c => ({text:c.x, type:c.y})),
-            infos: (minified.if || []).map(i => ({label:i.l, val:i.v, type:i.y})),
-            days: (minified.ds || []).map(d => ({
-                date: d.d, title: d.t,
-                eventsA: (d.ea || []).map(e => ({time:e.t, type:e.y, icon:e.i, title:e.l, desc:e.d, map:e.m, isCommon:e.c===1})),
-                eventsB: (d.eb || []).map(e => ({time:e.t, type:e.y, icon:e.i, title:e.l, desc:e.d, map:e.m})),
-                eventsC: (d.ecp || []).map(e => ({time:e.t, type:e.y, icon:e.i, title:e.l, desc:e.d, map:e.m}))
-            }))
-        };
-    }
-
     function loadData() {
         const hash = window.location.hash;
-        if (hash) {
+        if (hash && hash.startsWith('#data=')) {
             try {
-                let compressed = '';
-                if(hash.startsWith('#d=')) {
-                    compressed = hash.substring(3); // V9 (minified)
-                    const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
-                    TRIP_DATA = expandData(JSON.parse(jsonStr));
-                } else if(hash.startsWith('#data=')) {
-                    compressed = hash.substring(6); // 구버전
-                    const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
-                    TRIP_DATA = JSON.parse(jsonStr);
-                }
+                const compressed = hash.substring(6);
+                const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
+                if (jsonStr) TRIP_DATA = JSON.parse(jsonStr);
             } catch (e) { console.error("Data Load Error", e); }
         }
 
