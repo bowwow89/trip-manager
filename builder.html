@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>여행 가이드 빌더 V2 (Dual Plan)</title>
+<title>여행 가이드 빌더 V3 (Triple Plan)</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 <style>
     body { font-family: -apple-system, sans-serif; background: #f3f4f6; padding: 20px; padding-bottom: 120px; }
     .container { max-width: 900px; margin: 0 auto; }
@@ -15,22 +16,29 @@
     .btn-green { background: #10b981; width: 100%; padding: 15px; font-size: 1.1rem; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
     .btn-red { background: #ef4444; font-size: 0.75rem; padding: 4px 8px; }
     .btn-gray { background: #6b7280; }
+    .btn-dark { background: #374151; }
     
     .day-block { border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 20px; background: #fff; }
-    .plan-tab { display: flex; gap: 10px; margin-bottom: 10px; border-bottom: 2px solid #f3f4f6; padding-bottom: 10px; }
-    .tab-btn { flex: 1; padding: 8px; text-align: center; border-radius: 6px; cursor: pointer; font-weight: bold; color: #6b7280; background: #f9fafb; }
-    .tab-btn.active { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
-    .tab-btn.active-b { background: #fff1f2; color: #db2777; border: 1px solid #fecdd3; }
+    
+    /* 탭 스타일 */
+    .plan-tab { display: flex; gap: 5px; margin-bottom: 10px; border-bottom: 2px solid #f3f4f6; padding-bottom: 10px; }
+    .tab-btn { flex: 1; padding: 8px; text-align: center; border-radius: 6px; cursor: pointer; font-weight: bold; color: #6b7280; background: #f9fafb; font-size: 0.9rem; }
+    
+    /* 활성화된 탭 색상 */
+    .tab-btn.active-a { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; } /* Plan A: 파랑 */
+    .tab-btn.active-b { background: #fff1f2; color: #db2777; border: 1px solid #fecdd3; } /* Plan B: 핑크 */
+    .tab-btn.active-c { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; } /* Plan C: 초록 */
 
     .event-item { background: #f9fafb; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #eee; position: relative; }
     .event-item.plan-b { background: #fff1f2; border-color: #fecdd3; }
+    .event-item.plan-c { background: #ecfdf5; border-color: #a7f3d0; }
 </style>
 </head>
 <body>
 
 <div class="container">
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">🧳 여행 빌더 V2 (A/B 플랜)</h1>
+        <h1 class="text-2xl font-bold text-gray-800">🧳 여행 빌더 V3 (3 Plans)</h1>
         <button onclick="saveWork()" class="btn btn-gray text-xs">임시 저장</button>
     </div>
 
@@ -40,7 +48,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="font-bold text-sm text-gray-600">여행 제목</label>
-                <input type="text" id="appTitle" class="input-field" value="시즈오카 여행">
+                <input type="text" id="appTitle" class="input-field" value="나만의 여행">
             </div>
             <div>
                 <label class="font-bold text-sm text-gray-600">테마 색상</label>
@@ -52,18 +60,29 @@
                 </select>
             </div>
         </div>
-        <div class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <h3 class="font-bold text-sm text-gray-700 mb-2">🔄 선택 모드 설정 (예: 렌트카 vs 대중교통)</h3>
-            <div class="grid grid-cols-2 gap-4">
+
+        <!-- 멀티 플랜 설정 영역 -->
+        <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div class="flex items-center gap-2 mb-3">
+                <input type="checkbox" id="chkMultiPlan" class="w-5 h-5" onchange="toggleMultiPlan()">
+                <label for="chkMultiPlan" class="font-bold text-gray-800 cursor-pointer select-none">🔄 멀티 플랜(2~3개) 사용하기</label>
+            </div>
+            
+            <div id="multiPlanInputs" class="grid grid-cols-3 gap-2" style="display:none;">
                 <div>
-                    <label class="text-xs text-blue-600 font-bold">Plan A 이름 (기본)</label>
-                    <input type="text" id="planAName" class="input-field" value="렌트카">
+                    <label class="text-xs text-blue-600 font-bold">Plan A (기본)</label>
+                    <input type="text" id="planAName" class="input-field" placeholder="예: 렌트카">
                 </div>
                 <div>
-                    <label class="text-xs text-pink-600 font-bold">Plan B 이름 (선택)</label>
-                    <input type="text" id="planBName" class="input-field" value="대중교통" placeholder="비워두면 모드 선택 기능이 꺼집니다">
+                    <label class="text-xs text-pink-600 font-bold">Plan B</label>
+                    <input type="text" id="planBName" class="input-field" placeholder="예: 대중교통">
+                </div>
+                <div>
+                    <label class="text-xs text-green-600 font-bold">Plan C</label>
+                    <input type="text" id="planCName" class="input-field" placeholder="예: 택시투어">
                 </div>
             </div>
+            <p class="text-xs text-gray-400 mt-2">* 체크 해제 시 'Plan A' 하나로만 작동합니다.</p>
         </div>
     </div>
 
@@ -77,7 +96,6 @@
     <!-- 3. 일정 관리 -->
     <div class="card">
         <h2 class="text-xl font-bold mb-4">3. 상세 일정</h2>
-        <p class="text-sm text-gray-500 mb-4">📅 날짜별로 Plan A와 Plan B 일정을 각각 입력할 수 있습니다.</p>
         <div id="days-container"></div>
         <button onclick="addDay()" class="btn btn-blue w-full mt-4">+ 날짜(Day) 추가</button>
     </div>
@@ -85,28 +103,29 @@
 
 <!-- 하단 고정 버튼 -->
 <div class="fixed bottom-0 left-0 w-full p-4 bg-white border-t shadow-lg z-50">
-    <div class="container">
-        <button onclick="generateFile()" class="btn btn-green">✨ 최종 앱 파일 생성 (HTML 다운로드)</button>
-        <p class="text-xs text-center text-gray-500 mt-2">이 파일을 GitHub에 index.html로 올리세요. 주소가 깔끔해집니다!</p>
+    <div class="container flex gap-2">
+        <button onclick="openApp()" class="btn btn-green flex-1">🚀 앱 실행 (index.html 연결)</button>
+        <button onclick="copyLink()" class="btn btn-dark w-24">🔗 복사</button>
     </div>
 </div>
 
 <script>
     // --- 데이터 구조 ---
     let tripData = {
-        title: "시즈오카 여행", theme: "blue",
-        planA: "렌트카", planB: "대중교통",
-        checks: [{text:"여권"}, {text:"돼지코"}, {text:"동전지갑"}],
+        title: "", theme: "blue",
+        useMulti: false,
+        planA: "", planB: "", planC: "",
+        checks: [{text:""}],
         days: [
             { 
-                date: "1일차", title: "출국 & 도착",
-                eventsA: [{time:"10:00", icon:"✈️", type:"fly", title:"공항 도착", desc:"입국심사", map:""}],
-                eventsB: [] 
+                date: "1일차", title: "",
+                eventsA: [{time:"10:00", icon:"✈️", type:"fly", title:"공항 도착", desc:"", map:""}],
+                eventsB: [],
+                eventsC: []
             }
         ]
     };
 
-    // 아이콘 옵션
     const iconOpts = [
         {v:"fly", l:"✈️이동"}, {v:"bus", l:"🚌버스"}, {v:"train", l:"🚆기차"},
         {v:"car", l:"🚗차량"}, {v:"food", l:"🍔식사"}, {v:"beer", l:"🍺술"},
@@ -114,14 +133,30 @@
         {v:"map", l:"📍장소"}
     ];
 
-    // --- 렌더링 ---
+    // --- 초기 렌더링 및 이벤트 ---
+    function toggleMultiPlan() {
+        tripData.useMulti = document.getElementById('chkMultiPlan').checked;
+        render(); // 다시 그리기
+    }
+
     function render() {
+        // 기본값 세팅
         document.getElementById('appTitle').value = tripData.title;
         document.getElementById('themeColor').value = tripData.theme;
-        document.getElementById('planAName').value = tripData.planA;
-        document.getElementById('planBName').value = tripData.planB;
+        document.getElementById('chkMultiPlan').checked = tripData.useMulti;
+        
+        // 멀티플랜 입력창 표시/숨김
+        const multiInputs = document.getElementById('multiPlanInputs');
+        if(tripData.useMulti) {
+            multiInputs.style.display = 'grid';
+            document.getElementById('planAName').value = tripData.planA;
+            document.getElementById('planBName').value = tripData.planB;
+            document.getElementById('planCName').value = tripData.planC;
+        } else {
+            multiInputs.style.display = 'none';
+        }
 
-        // 체크리스트
+        // 체크리스트 렌더링
         const cList = document.getElementById('check-list');
         cList.innerHTML = '';
         tripData.checks.forEach((c, i) => {
@@ -132,19 +167,32 @@
                 </div>`;
         });
 
-        // 일정 리스트
+        // 일정 렌더링
         const dCont = document.getElementById('days-container');
         dCont.innerHTML = '';
         
         tripData.days.forEach((d, dIdx) => {
-            // Day 별 Plan A/B 탭 상태 관리 (임시로 DOM 속성에 저장 안하고 그냥 A를 보여줌, 클릭시 JS로 전환)
-            // 편의상 렌더링 시에는 현재 활성화된 탭 정보를 어딘가에 저장해야 하지만, 간단하게 구현하기 위해
-            // 각 Day 박스 안에 두 리스트를 다 그려두고 CSS로 숨김 처리 하는 방식 사용
+            const activeTab = d._activeTab || 'A';
             
-            const activeTab = d._activeTab || 'A'; // 기본 A
+            // Plan 이름 (멀티 아니면 그냥 '일정')
+            const nameA = tripData.useMulti ? (tripData.planA || 'Plan A') : '상세 일정';
+            const nameB = tripData.planB || 'Plan B';
+            const nameC = tripData.planC || 'Plan C';
 
+            // 이벤트 HTML 생성
             let eventsAHtml = renderEvents(d.eventsA, dIdx, 'A');
             let eventsBHtml = renderEvents(d.eventsB, dIdx, 'B');
+            let eventsCHtml = renderEvents(d.eventsC, dIdx, 'C');
+
+            // 탭 버튼 HTML (멀티모드일 때만 B, C 보임)
+            let tabHtml = `<div class="plan-tab">`;
+            tabHtml += `<div class="tab-btn ${activeTab==='A'?'active-a':''}" onclick="switchDayTab(${dIdx}, 'A')">${nameA}</div>`;
+            
+            if(tripData.useMulti) {
+                tabHtml += `<div class="tab-btn ${activeTab==='B'?'active-b':''}" onclick="switchDayTab(${dIdx}, 'B')">${nameB}</div>`;
+                tabHtml += `<div class="tab-btn ${activeTab==='C'?'active-c':''}" onclick="switchDayTab(${dIdx}, 'C')">${nameC}</div>`;
+            }
+            tabHtml += `</div>`;
 
             const div = document.createElement('div');
             div.className = 'day-block';
@@ -155,19 +203,21 @@
                     <button class="btn btn-red h-8 ml-2" onclick="removeDay(${dIdx})">삭제</button>
                 </div>
                 
-                <div class="plan-tab">
-                    <div class="tab-btn ${activeTab==='A'?'active':''}" onclick="switchDayTab(${dIdx}, 'A')">🅰️ ${tripData.planA || 'Plan A'}</div>
-                    <div class="tab-btn ${activeTab==='B'?'active-b':''}" onclick="switchDayTab(${dIdx}, 'B')">🅱️ ${tripData.planB || 'Plan B'}</div>
+                ${tabHtml}
+
+                <div style="display:${activeTab==='A'?'block':'none'}">
+                    ${eventsAHtml}
+                    <button class="w-full py-2 border-2 border-dashed border-blue-200 text-blue-500 rounded text-sm hover:bg-blue-50" onclick="addEvent(${dIdx}, 'A')">+ 일정 추가</button>
+                </div>
+                
+                <div style="display:${activeTab==='B'?'block':'none'}">
+                    ${eventsBHtml}
+                    <button class="w-full py-2 border-2 border-dashed border-pink-200 text-pink-500 rounded text-sm hover:bg-pink-50" onclick="addEvent(${dIdx}, 'B')">+ ${nameB} 추가</button>
                 </div>
 
-                <div id="day-${dIdx}-list-A" style="display:${activeTab==='A'?'block':'none'}">
-                    ${eventsAHtml}
-                    <button class="w-full py-2 border-2 border-dashed border-blue-200 text-blue-500 rounded text-sm hover:bg-blue-50" onclick="addEvent(${dIdx}, 'A')">+ ${tripData.planA} 일정 추가</button>
-                </div>
-                <div id="day-${dIdx}-list-B" style="display:${activeTab==='B'?'block':'none'}">
-                    <div class="p-2 bg-pink-50 text-xs text-pink-600 mb-2 rounded">Plan B(대안 일정)가 없다면 비워두세요.</div>
-                    ${eventsBHtml}
-                    <button class="w-full py-2 border-2 border-dashed border-pink-200 text-pink-500 rounded text-sm hover:bg-pink-50" onclick="addEvent(${dIdx}, 'B')">+ ${tripData.planB} 일정 추가</button>
+                <div style="display:${activeTab==='C'?'block':'none'}">
+                    ${eventsCHtml}
+                    <button class="w-full py-2 border-2 border-dashed border-green-200 text-green-500 rounded text-sm hover:bg-green-50" onclick="addEvent(${dIdx}, 'C')">+ ${nameC} 추가</button>
                 </div>
             `;
             dCont.appendChild(div);
@@ -176,329 +226,92 @@
 
     function renderEvents(events, dIdx, planType) {
         if(!events) return '';
+        let typeClass = planType === 'B' ? 'plan-b' : (planType === 'C' ? 'plan-c' : '');
+        
         return events.map((e, eIdx) => {
             let opts = iconOpts.map(o => `<option value="${o.v}" ${e.type===o.v?'selected':''}>${o.l}</option>`).join('');
             return `
-            <div class="event-item ${planType==='B'?'plan-b':''}">
+            <div class="event-item ${typeClass}">
                 <button class="absolute top-2 right-2 text-red-400 text-xs font-bold" onclick="removeEvent(${dIdx}, ${eIdx}, '${planType}')">X</button>
                 <div class="flex gap-2 mb-1">
                     <input class="input-field w-20" value="${e.time}" placeholder="시간" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'time', this.value)">
                     <select class="input-field w-24" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'type', this.value); updateEvent(${dIdx}, ${eIdx}, '${planType}', 'icon', this.options[this.selectedIndex].text.substring(0,2))">${opts}</select>
                     <input class="input-field" value="${e.title}" placeholder="제목" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'title', this.value)">
                 </div>
-                <input class="input-field text-sm mb-1" value="${e.desc}" placeholder="설명 (메모)" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'desc', this.value)">
-                <input class="input-field text-sm" value="${e.map||''}" placeholder="구글지도 검색어 (예: 도쿄 타워)" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'map', this.value)">
+                <input class="input-field text-sm mb-1" value="${e.desc}" placeholder="설명" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'desc', this.value)">
+                <input class="input-field text-sm" value="${e.map||''}" placeholder="지도 검색어" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'map', this.value)">
             </div>`;
         }).join('');
     }
 
-    // --- 로직 함수들 ---
+    // --- 데이터 조작 ---
     function updateDay(idx, key, val) { tripData.days[idx][key] = val; }
     function removeDay(idx) { if(confirm('삭제합니까?')) { tripData.days.splice(idx, 1); render(); } }
-    function addDay() { tripData.days.push({date:"Day "+(tripData.days.length+1), title:"", eventsA:[], eventsB:[]}); render(); }
+    function addDay() { tripData.days.push({date:"Day "+(tripData.days.length+1), title:"", eventsA:[], eventsB:[], eventsC:[]}); render(); }
     
     function switchDayTab(dIdx, tab) { tripData.days[dIdx]._activeTab = tab; render(); }
     
     function addEvent(dIdx, plan) {
         const newEv = {time:"00:00", type:"map", icon:"📍", title:"", desc:"", map:""};
         if(plan === 'A') tripData.days[dIdx].eventsA.push(newEv);
-        else tripData.days[dIdx].eventsB.push(newEv);
+        else if(plan === 'B') tripData.days[dIdx].eventsB.push(newEv);
+        else tripData.days[dIdx].eventsC.push(newEv);
         render();
     }
     
     function removeEvent(dIdx, eIdx, plan) {
         if(plan === 'A') tripData.days[dIdx].eventsA.splice(eIdx, 1);
-        else tripData.days[dIdx].eventsB.splice(eIdx, 1);
+        else if(plan === 'B') tripData.days[dIdx].eventsB.splice(eIdx, 1);
+        else tripData.days[dIdx].eventsC.splice(eIdx, 1);
         render();
     }
     
     function updateEvent(dIdx, eIdx, plan, key, val) {
         if(plan === 'A') tripData.days[dIdx].eventsA[eIdx][key] = val;
-        else tripData.days[dIdx].eventsB[eIdx][key] = val;
+        else if(plan === 'B') tripData.days[dIdx].eventsB[eIdx][key] = val;
+        else tripData.days[dIdx].eventsC[eIdx][key] = val;
     }
     
     function addCheck() { tripData.checks.push({text:""}); render(); }
 
     function saveWork() {
-        // 입력 필드 강제 동기화
+        // 입력값 강제 동기화
         tripData.title = document.getElementById('appTitle').value;
         tripData.theme = document.getElementById('themeColor').value;
-        tripData.planA = document.getElementById('planAName').value;
-        tripData.planB = document.getElementById('planBName').value;
-        localStorage.setItem('myTripDataV2', JSON.stringify(tripData));
-        alert('브라우저에 임시 저장됨!');
+        if(tripData.useMulti) {
+            tripData.planA = document.getElementById('planAName').value;
+            tripData.planB = document.getElementById('planBName').value;
+            tripData.planC = document.getElementById('planCName').value;
+        }
+        localStorage.setItem('myTripDataV3', JSON.stringify(tripData));
+        alert('임시 저장 완료!');
     }
 
     window.onload = function() {
-        const saved = localStorage.getItem('myTripDataV2');
+        const saved = localStorage.getItem('myTripDataV3');
         if(saved) {
-             if(confirm('저장된 작업 내용을 불러올까요?')) tripData = JSON.parse(saved);
+             if(confirm('이전 작업 내용을 불러올까요?')) tripData = JSON.parse(saved);
         }
         render();
     }
 
-    // --- ⭐ HTML 파일 생성기 ---
-    function generateFile() {
-        saveWork(); // 데이터 최신화
-
-        // 템플릿 로드
-        let template = document.getElementById('app-template').innerHTML;
-        
-        // 데이터 주입
-        const dataScript = `const TRIP_DATA = ${JSON.stringify(tripData)};`;
-        const finalHtml = template.replace('/*__DATA__*/', dataScript);
-        
-        // 다운로드
-        const blob = new Blob([finalHtml], { type: 'text/html' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'index.html';
-        a.click();
-        window.URL.revokeObjectURL(url);
+    // --- 연결 로직 ---
+    function getViewerUrl() {
+        saveWork();
+        const jsonStr = JSON.stringify(tripData);
+        const compressed = LZString.compressToEncodedURIComponent(jsonStr);
+        let baseUrl = window.location.href.replace('builder_v3.html', 'index.html');
+        // 파일명 다를 경우 대비
+        if (!baseUrl.includes('index.html')) {
+            baseUrl = baseUrl.split('?')[0]; 
+            if(baseUrl.endsWith('/')) baseUrl += 'index.html';
+            else baseUrl = baseUrl.substring(0, baseUrl.lastIndexOf('/')) + '/index.html';
+        }
+        return baseUrl + "#data=" + compressed;
     }
+
+    function openApp() { window.open(getViewerUrl(), '_blank'); }
+    function copyLink() { navigator.clipboard.writeText(getViewerUrl()).then(() => alert("링크 복사 완료!")); }
 </script>
-
-<!-- ▼▼▼ 결과물 앱 템플릿 (V28 스타일 계승 + 듀얼 모드) ▼▼▼ -->
-<script type="text/template" id="app-template">
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>여행 가이드</title>
-<style>
-    /* Base */
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
-    body { font-family: -apple-system, sans-serif; background: #f3f4f6; color: #1f2937; height: 100dvh; display: flex; justify-content: center; overflow: hidden; }
-    .app-container { width: 100%; max-width: 480px; height: 100%; background: #fff; display: flex; flex-direction: column; position: relative; }
-    
-    /* Header */
-    header { padding: 1.5rem; padding-bottom: 1rem; color: white; transition: 0.3s; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 0 0 1.5rem 1.5rem; flex-shrink: 0; }
-    header.shrink { padding: 0.8rem 1rem; border-radius: 0 0 1rem 1rem; }
-    .bg-blue { background: linear-gradient(to right, #3b82f6, #06b6d4); }
-    .bg-pink { background: linear-gradient(to right, #ec4899, #f43f5e); }
-    .bg-green { background: linear-gradient(to right, #10b981, #059669); }
-    .bg-purple { background: linear-gradient(to right, #8b5cf6, #6366f1); }
-
-    .title { font-size: 1.5rem; font-weight: 800; margin-bottom: 5px; }
-    header.shrink .title { font-size: 1.1rem; margin: 0; }
-    
-    /* Toggle Switch */
-    .mode-toggle { display: flex; background: rgba(0,0,0,0.15); border-radius: 99px; padding: 3px; margin-top: 10px; width: fit-content; transition: 0.2s; }
-    header.shrink .mode-toggle { display: none; }
-    .mode-btn { padding: 5px 12px; border-radius: 99px; border: none; font-size: 0.8rem; font-weight: bold; cursor: pointer; color: rgba(255,255,255,0.8); background: transparent; transition: 0.2s; }
-    .mode-btn.active { background: white; color: #333; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-
-    /* Content */
-    main { flex: 1; overflow-y: auto; padding: 1rem; padding-bottom: 5rem; scroll-behavior: smooth; }
-    .card { background: white; border-radius: 1rem; padding: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 1rem; border: 1px solid #f3f4f6; }
-    .card-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 1rem; color: #374151; border-bottom: 2px solid #f3f4f6; padding-bottom: 0.5rem; }
-
-    /* Tabs */
-    .day-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 10px; }
-    .day-tabs::-webkit-scrollbar { display: none; }
-    .day-btn { white-space: nowrap; padding: 8px 14px; border-radius: 99px; font-size: 0.9rem; font-weight: bold; border: none; background: #f3f4f6; color: #6b7280; cursor: pointer; }
-    .day-btn.active { background: #1f2937; color: white; }
-
-    /* Timeline */
-    .event-item { display: flex; gap: 12px; margin-bottom: 20px; position: relative; }
-    .event-item::before { content: ''; position: absolute; left: 19px; top: 35px; bottom: -20px; width: 2px; background: #e5e7eb; z-index: 0; }
-    .event-item:last-child::before { display: none; }
-    
-    .icon-box { width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; z-index: 1; position: relative; background: #eff6ff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    /* Icon Colors */
-    .type-fly { background: #dbeafe; color: #2563eb; } .type-bus { background: #dcfce7; color: #16a34a; }
-    .type-car { background: #e0e7ff; color: #4f46e5; } .type-food { background: #ffedd5; color: #ea580c; }
-    .type-beer { background: #fef9c3; color: #ca8a04; } .type-camera { background: #fce7f3; color: #db2777; }
-    .type-shop { background: #f3e8ff; color: #9333ea; } .type-bed { background: #f3f4f6; color: #4b5563; }
-
-    .time { font-size: 0.75rem; font-weight: bold; color: #6b7280; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
-    .evt-title { font-size: 1rem; font-weight: bold; color: #1f2937; margin: 2px 0; }
-    .evt-desc { font-size: 0.85rem; color: #6b7280; line-height: 1.4; white-space: pre-wrap; }
-    .btn-map { display: inline-flex; align-items: center; font-size: 0.75rem; font-weight: 600; color: #2563eb; background: #eff6ff; padding: 3px 8px; border-radius: 6px; margin-left: auto; cursor: pointer; border: none; }
-
-    /* Check */
-    .check-item { display: flex; align-items: center; gap: 10px; padding: 12px; border-bottom: 1px solid #f3f4f6; cursor: pointer; }
-    .check-box { width: 20px; height: 20px; border-radius: 4px; border: 2px solid #d1d5db; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; }
-    .checked .check-box { background: #10b981; border-color: #10b981; }
-    .checked span { text-decoration: line-through; color: #9ca3af; }
-
-    /* Nav */
-    nav { position: absolute; bottom: 0; width: 100%; background: white; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 12px 0; padding-bottom: max(12px, env(safe-area-inset-bottom)); z-index: 50; }
-    .nav-btn { background: none; border: none; font-size: 0.7rem; font-weight: 600; color: #9ca3af; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; width: 33%; }
-    .nav-btn.active { color: #1f2937; }
-    .nav-btn svg { width: 24px; height: 24px; stroke-width: 2px; }
-
-</style>
-</head>
-<body>
-
-<div class="app-container">
-    <header id="header" class="bg-blue">
-        <div class="title" id="disp-title">여행 가이드</div>
-        <div id="subtitle" style="font-size:0.85rem; opacity:0.9;">즐거운 여행 되세요!</div>
-        
-        <!-- 모드 선택 토글 (Plan B가 있을 때만 보임) -->
-        <div id="mode-toggle-area" class="mode-toggle" style="display:none;">
-            <button onclick="setMode('A')" id="btn-mode-a" class="mode-btn active">Plan A</button>
-            <button onclick="setMode('B')" id="btn-mode-b" class="mode-btn">Plan B</button>
-        </div>
-    </header>
-
-    <main id="main-scroll">
-        <div id="content-area"></div>
-    </main>
-
-    <nav>
-        <button onclick="setTab('sch')" class="nav-btn active" id="btn-sch">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>일정
-        </button>
-        <button onclick="setTab('chk')" class="nav-btn" id="btn-chk">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>체크
-        </button>
-        <button onclick="setTab('info')" class="nav-btn" id="btn-info">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>정보
-        </button>
-    </nav>
-</div>
-
-<script>
-    /*__DATA__*/
-    // 위 라인은 빌더에 의해 실제 데이터로 대체됨
-    if(typeof TRIP_DATA === 'undefined') var TRIP_DATA = { title:"샘플", days:[] };
-
-    let state = { tab: 'sch', dayIdx: 0, mode: 'A', checked: {} };
-
-    // 저장된 체크리스트 로드
-    const savedChecks = localStorage.getItem('chk_' + TRIP_DATA.title);
-    if(savedChecks) state.checked = JSON.parse(savedChecks);
-
-    function init() {
-        document.getElementById('disp-title').innerText = TRIP_DATA.title;
-        document.getElementById('header').className = 'bg-' + (TRIP_DATA.theme || 'blue');
-        
-        // Plan B가 하나라도 있으면 토글 표시
-        const hasPlanB = TRIP_DATA.days.some(d => d.eventsB && d.eventsB.length > 0) && TRIP_DATA.planB;
-        if(hasPlanB) {
-            document.getElementById('mode-toggle-area').style.display = 'flex';
-            document.getElementById('btn-mode-a').innerText = TRIP_DATA.planA || 'Plan A';
-            document.getElementById('btn-mode-b').innerText = TRIP_DATA.planB || 'Plan B';
-        }
-
-        render();
-    }
-
-    function render() {
-        // 탭 UI
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('btn-' + state.tab).classList.add('active');
-        
-        const content = document.getElementById('content-area');
-        content.innerHTML = '';
-
-        if(state.tab === 'sch') renderSchedule(content);
-        else if(state.tab === 'chk') renderChecklist(content);
-        else renderInfo(content);
-
-        // 모드 버튼 스타일
-        if(document.getElementById('mode-toggle-area').style.display !== 'none') {
-            document.getElementById('btn-mode-a').className = state.mode === 'A' ? 'mode-btn active' : 'mode-btn';
-            document.getElementById('btn-mode-b').className = state.mode === 'B' ? 'mode-btn active' : 'mode-btn';
-        }
-    }
-
-    function renderSchedule(cont) {
-        if(!TRIP_DATA.days.length) { cont.innerHTML = '<div class="card">일정이 없습니다.</div>'; return; }
-
-        // 날짜 탭
-        let tabs = '<div class="day-tabs">';
-        TRIP_DATA.days.forEach((d, i) => {
-            tabs += `<button onclick="setDay(${i})" class="day-btn ${i===state.dayIdx?'active':''}">${d.date}</button>`;
-        });
-        tabs += '</div>';
-
-        const curDay = TRIP_DATA.days[state.dayIdx];
-        const events = state.mode === 'A' ? curDay.eventsA : curDay.eventsB;
-        
-        document.getElementById('subtitle').innerText = curDay.title || (state.mode === 'A' ? TRIP_DATA.planA : TRIP_DATA.planB) + ' 일정';
-
-        let list = '<div class="card">';
-        if(!events || events.length === 0) {
-            list += `<div style="text-align:center; padding:20px; color:#9ca3af;">${state.mode === 'A' ? TRIP_DATA.planA : TRIP_DATA.planB} 일정이 없습니다.</div>`;
-        } else {
-            events.forEach(e => {
-                const mapBtn = e.map ? `<button onclick="openMap('${e.map}')" class="btn-map">📍 지도</button>` : '';
-                list += `
-                <div class="event-item">
-                    <div class="icon-box type-${e.type}">${e.icon}</div>
-                    <div style="flex:1;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span class="time">${e.time}</span>
-                            ${mapBtn}
-                        </div>
-                        <div class="evt-title">${e.title}</div>
-                        <div class="evt-desc">${e.desc}</div>
-                    </div>
-                </div>`;
-            });
-        }
-        list += '</div>';
-        cont.innerHTML = tabs + list;
-    }
-
-    function renderChecklist(cont) {
-        document.getElementById('subtitle').innerText = '준비물 체크리스트';
-        let html = '<div class="card"><div class="card-title">👜 짐싸기</div>';
-        (TRIP_DATA.checks || []).forEach((c, i) => {
-            const isChk = state.checked[i];
-            html += `
-            <div class="check-item ${isChk?'checked':''}" onclick="toggleCheck(${i})">
-                <div class="check-box">${isChk?'✔':''}</div>
-                <span>${c.text}</span>
-            </div>`;
-        });
-        html += '</div>';
-        cont.innerHTML = html;
-    }
-
-    function renderInfo(cont) {
-        document.getElementById('subtitle').innerText = '유용한 정보';
-        cont.innerHTML = `
-        <div class="card">
-            <div class="card-title">🆘 긴급 연락처</div>
-            <div class="check-item" onclick="location.href='tel:110'">👮‍♂️ 경찰서 (110)</div>
-            <div class="check-item" onclick="location.href='tel:119'">🚑 구급차 (119)</div>
-        </div>
-        <div class="card">
-            <div class="card-title">🔗 빠른 링크</div>
-            <div class="check-item" onclick="window.open('https://translate.google.com')">🗣️ 구글 번역기</div>
-            <div class="check-item" onclick="window.open('https://www.google.com/maps')">🗺️ 구글 지도</div>
-        </div>`;
-    }
-
-    // Actions
-    window.setTab = (t) => { state.tab = t; render(); window.scrollTo(0,0); };
-    window.setDay = (i) => { state.dayIdx = i; render(); };
-    window.setMode = (m) => { state.mode = m; render(); window.scrollTo(0,0); };
-    window.openMap = (q) => window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q));
-    window.toggleCheck = (i) => {
-        state.checked[i] = !state.checked[i];
-        localStorage.setItem('chk_' + TRIP_DATA.title, JSON.stringify(state.checked));
-        render();
-    };
-
-    // Scroll
-    document.getElementById('main-scroll').addEventListener('scroll', function() {
-        if(this.scrollTop > 20) document.getElementById('header').classList.add('shrink');
-        else document.getElementById('header').classList.remove('shrink');
-    });
-
-    init();
-<\/script>
-</body>
-</html>
-</script>
-
 </body>
 </html>
