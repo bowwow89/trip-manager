@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>여행 가이드 빌더 🛠️</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- 데이터 압축을 위한 라이브러리 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+<style>
+    body { font-family: -apple-system, sans-serif; background: #f3f4f6; padding: 20px; padding-bottom: 100px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .input-field { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 5px; }
+    .btn { padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; color: white; }
+    .btn-blue { background: #3b82f6; }
+    .btn-green { background: #10b981; width: 100%; padding: 15px; font-size: 1.1rem; }
+    .btn-red { background: #ef4444; font-size: 0.8rem; }
+    .day-block { border-left: 4px solid #3b82f6; padding-left: 15px; margin-bottom: 30px; }
+    .event-item { background: #f9fafb; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #eee; position: relative; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="text-2xl font-bold mb-6 text-gray-800">🧳 여행 가이드 빌더 (Link 방식)</h1>
+
+    <div class="card">
+        <h2 class="text-xl font-bold mb-4">1. 기본 설정</h2>
+        <label class="block mb-2 font-bold text-sm text-gray-600">여행 제목</label>
+        <input type="text" id="appTitle" class="input-field" value="나만의 시즈오카 여행">
+        <label class="block mb-2 font-bold text-sm text-gray-600 mt-2">테마 색상</label>
+        <select id="themeColor" class="input-field">
+            <option value="blue">블루 (기본)</option>
+            <option value="pink">핑크 (벚꽃)</option>
+            <option value="green">그린 (자연)</option>
+            <option value="purple">퍼플 (야경)</option>
+        </select>
+    </div>
+
+    <div class="card">
+        <h2 class="text-xl font-bold mb-4">2. 체크리스트</h2>
+        <div id="check-list"></div>
+        <button onclick="addCheck()" class="btn btn-blue text-sm mt-2">+ 항목 추가</button>
+    </div>
+
+    <div class="card">
+        <h2 class="text-xl font-bold mb-4">3. 일정 관리</h2>
+        <div id="days-list"></div>
+        <button onclick="addDay()" class="btn btn-blue w-full mt-4">+ 날짜 추가</button>
+    </div>
+</div>
+
+<div class="fixed bottom-0 left-0 w-full p-4 bg-white border-t shadow-lg z-50">
+    <div class="container flex gap-2">
+        <button onclick="openViewer()" class="btn btn-green flex-1">✈️ 여행 앱 실행하기 (새창)</button>
+        <button onclick="copyLink()" class="btn bg-gray-600 flex-none w-24">🔗 링크복사</button>
+    </div>
+</div>
+
+<script>
+    // --- 초기 데이터 ---
+    let tripData = {
+        title: "시즈오카 여행", theme: "blue",
+        checks: [{text:"여권"}, {text:"돼지코"}, {text:"동전지갑"}],
+        days: [
+            { date: "1일차", title: "출국 & 도착", events: [
+                {time:"10:00", icon:"✈️", type:"fly", title:"공항 도착", desc:"입국심사", map:""}
+            ]}
+        ]
+    };
+
+    // 저장된 데이터 불러오기
+    if(localStorage.getItem('myTripData')) {
+        tripData = JSON.parse(localStorage.getItem('myTripData'));
+    }
+
+    const iconOpts = [
+        {v:"fly", l:"✈️이동"}, {v:"food", l:"🍔식사"}, {v:"camera", l:"📷관광"},
+        {v:"shop", l:"🛍️쇼핑"}, {v:"bed", l:"🛏️숙소"}, {v:"map", l:"📍장소"}
+    ];
+
+    function render() {
+        document.getElementById('appTitle').value = tripData.title;
+        document.getElementById('themeColor').value = tripData.theme;
+
+        // 체크리스트
+        const cList = document.getElementById('check-list');
+        cList.innerHTML = '';
+        tripData.checks.forEach((c, i) => {
+            cList.innerHTML += `
+                <div class="flex gap-2 mb-2">
+                    <input class="input-field" value="${c.text}" oninput="tripData.checks[${i}].text=this.value; save();">
+                    <button class="btn btn-red" onclick="tripData.checks.splice(${i},1); render(); save();">삭제</button>
+                </div>`;
+        });
+
+        // 일정
+        const dList = document.getElementById('days-list');
+        dList.innerHTML = '';
+        tripData.days.forEach((d, di) => {
+            let evHtml = '';
+            d.events.forEach((e, ei) => {
+                let opts = iconOpts.map(o => `<option value="${o.v}" ${e.type===o.v?'selected':''}>${o.l}</option>`).join('');
+                evHtml += `
+                    <div class="event-item">
+                        <button class="absolute top-2 right-2 text-red-500 text-xs font-bold" onclick="tripData.days[${di}].events.splice(${ei},1); render(); save();">X 삭제</button>
+                        <div class="flex gap-2 mb-1">
+                            <input class="input-field w-20" value="${e.time}" oninput="updateEv(${di},${ei},'time',this.value)">
+                            <select class="input-field w-24" onchange="updateEv(${di},${ei},'type',this.value); updateEv(${di},${ei},'icon',this.options[this.selectedIndex].text.substring(0,2))">${opts}</select>
+                            <input class="input-field" value="${e.title}" oninput="updateEv(${di},${ei},'title',this.value)">
+                        </div>
+                        <input class="input-field text-sm mb-1" placeholder="설명" value="${e.desc}" oninput="updateEv(${di},${ei},'desc',this.value)">
+                        <input class="input-field text-sm" placeholder="지도 검색어 (예: 시즈오카 역)" value="${e.map||''}" oninput="updateEv(${di},${ei},'map',this.value)">
+                    </div>`;
+            });
+
+            dList.innerHTML += `
+                <div class="day-block">
+                    <div class="flex justify-between items-end mb-2 pr-2">
+                        <div class="w-1/3"><label class="text-xs font-bold text-blue-600">날짜</label><input class="input-field font-bold" value="${d.date}" oninput="tripData.days[${di}].date=this.value; save();"></div>
+                        <div class="w-1/2 ml-2"><label class="text-xs font-bold text-gray-500">테마</label><input class="input-field" value="${d.title}" oninput="tripData.days[${di}].title=this.value; save();"></div>
+                        <button class="btn btn-red h-8 ml-2" onclick="tripData.days.splice(${di},1); render(); save();">Day삭제</button>
+                    </div>
+                    ${evHtml}
+                    <button class="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded text-sm hover:bg-gray-50" onclick="addEv(${di})">+ 일정 추가</button>
+                </div>`;
+        });
+    }
+
+    // --- 로직 ---
+    function save() {
+        tripData.title = document.getElementById('appTitle').value;
+        tripData.theme = document.getElementById('themeColor').value;
+        localStorage.setItem('myTripData', JSON.stringify(tripData));
+    }
+    function updateEv(di, ei, key, val) { tripData.days[di].events[ei][key] = val; save(); }
+    function addCheck() { tripData.checks.push({text:""}); render(); save(); }
+    function addDay() { tripData.days.push({date:"Day "+(tripData.days.length+1), title:"새 일정", events:[]}); render(); save(); }
+    function addEv(di) { tripData.days[di].events.push({time:"00:00", type:"map", icon:"📍", title:"", desc:""}); render(); save(); }
+
+    // --- 핵심: 링크 생성기 ---
+    function getViewerUrl() {
+        save();
+        // 1. 데이터 JSON 문자열화
+        const jsonStr = JSON.stringify(tripData);
+        // 2. LZString으로 압축 (URL 길이 줄이기 위해 필수)
+        const compressed = LZString.compressToEncodedURIComponent(jsonStr);
+        // 3. 같은 폴더의 index.html로 링크 생성
+        // 로컬 테스트용 vs 호스팅용 구분
+        let baseUrl = window.location.href.replace('builder.html', 'index.html');
+        // 만약 파일명이 다를 수 있으니 안전하게 처리
+        if (!baseUrl.includes('index.html')) {
+            baseUrl = baseUrl.split('?')[0]; 
+            if(baseUrl.endsWith('/')) baseUrl += 'index.html';
+            else baseUrl = baseUrl.substring(0, baseUrl.lastIndexOf('/')) + '/index.html';
+        }
+        
+        return baseUrl + "#data=" + compressed;
+    }
+
+    function openViewer() {
+        const url = getViewerUrl();
+        window.open(url, '_blank');
+    }
+
+    function copyLink() {
+        const url = getViewerUrl();
+        navigator.clipboard.writeText(url).then(() => alert("링크가 복사되었습니다! 친구에게 공유하세요."));
+    }
+
+    render();
+</script>
+</body>
+</html>
