@@ -453,7 +453,11 @@
 
                 return `
                 <div class="event-item ${rowClass}">
-                    <button class="absolute top-2 right-2 text-red-400 text-xs font-bold" onclick="removeEvent(${dIdx}, ${eIdx}, '${planType}')">X</button>
+                    <button class="absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors" onclick="removeEvent(${dIdx}, ${eIdx}, '${planType}')" title="삭제">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                     <div class="flex flex-col sm:flex-row gap-2 mb-2">
                         <div class="flex gap-2 items-center">
                             <div class="handle"><span style="font-size:1.2rem;">≡</span></div>
@@ -553,4 +557,5 @@
 </body>
 
 </html>
+
 
