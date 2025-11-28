@@ -349,10 +349,27 @@
             const cList = document.getElementById('check-list');
             cList.innerHTML = '';
             tripData.checks.forEach((c, i) => {
-                let typeOpts = `<option value="all">공통</option>`;
-                if (tripData.useMulti) typeOpts += `<option value="A">Plan A</option><option value="B">Plan B</option><option value="C">Plan C</option>`;
-                cList.innerHTML += `<div class="flex gap-2 mb-2"><input class="input-field flex-1" value="${c.text}" placeholder="준비물" oninput="tripData.checks[${i}].text=this.value"><select class="input-field w-28" onchange="tripData.checks[${i}].type=this.value" style="font-size:0.8rem;">${typeOpts}</select><button class="btn btn-red" onclick="tripData.checks.splice(${i},1); render();">삭제</button></div>`;
-                cList.querySelectorAll('select')[i].value = c.type || 'all';
+                // 데이터 마이그레이션 (구버전 호환)
+                if (!c.plans) {
+                    if (!c.type || c.type === 'all') c.plans = ['A', 'B', 'C'];
+                    else c.plans = [c.type];
+                }
+
+                let btnGroup = '';
+                if (tripData.useMulti) {
+                    const isA = c.plans.includes('A');
+                    const isB = c.plans.includes('B');
+                    const isC = c.plans.includes('C');
+                    btnGroup = `
+                        <div class="flex gap-1">
+                            <button class="btn ${isA ? 'btn-blue' : 'btn-gray'} text-xs" onclick="toggleCheckPlan(${i}, 'A')" style="padding:4px 8px; ${!isA ? 'background:#e5e7eb; color:#9ca3af;' : ''}">A</button>
+                            <button class="btn ${isB ? 'btn-pink' : 'btn-gray'} text-xs" onclick="toggleCheckPlan(${i}, 'B')" style="padding:4px 8px; background:${isB ? '#ec4899' : '#e5e7eb'}; color:${isB ? 'white' : '#9ca3af'};">B</button>
+                            <button class="btn ${isC ? 'btn-green' : 'btn-gray'} text-xs" onclick="toggleCheckPlan(${i}, 'C')" style="padding:4px 8px; background:${isC ? '#10b981' : '#e5e7eb'}; color:${isC ? 'white' : '#9ca3af'};">C</button>
+                        </div>
+                    `;
+                }
+
+                cList.innerHTML += `<div class="flex gap-2 mb-2 items-center"><input class="input-field flex-1" value="${c.text}" placeholder="준비물" oninput="tripData.checks[${i}].text=this.value" style="margin-bottom:0;">${btnGroup}<button class="btn btn-red" onclick="tripData.checks.splice(${i},1); render();">삭제</button></div>`;
             });
 
             const dCont = document.getElementById('days-container');
@@ -372,19 +389,18 @@
                 const div = document.createElement('div');
                 div.className = 'day-block';
                 div.innerHTML = `
-                <div class="flex justify-between items-end mb-4">
-                    <div class="w-1/3"><label class="text-xs font-bold text-gray-500">Day ${dIdx + 1} 날짜</label><input class="input-field font-bold" value="${d.date}" onchange="updateDay(${dIdx}, 'date', this.value)"></div>
-                    <div class="w-1/2 ml-2"><label class="text-xs font-bold text-gray-500">테마</label><input class="input-field" value="${d.title}" onchange="updateDay(${dIdx}, 'title', this.value)"></div>
-                    <button class="btn btn-red h-8 ml-2" onclick="removeDay(${dIdx})">Day 삭제</button>
-                </div>
-                ${tabHtml}
-                <div id="list-${dIdx}-A" style="display:${activeTab === 'A' ? 'block' : 'none'}">${renderEvents(d.eventsA, dIdx, 'A')}<button class="w-full py-2 border-2 border-dashed border-blue-200 text-blue-500 rounded text-sm hover:bg-blue-50" onclick="addEvent(${dIdx}, 'A')">+ ${nameA} 추가</button></div>
-                <div id="list-${dIdx}-B" style="display:${activeTab === 'B' ? 'block' : 'none'}">${renderEvents(d.eventsB, dIdx, 'B')}<button class="w-full py-2 border-2 border-dashed border-pink-200 text-pink-500 rounded text-sm hover:bg-pink-50" onclick="addEvent(${dIdx}, 'B')">+ 추가</button></div>
-                <div id="list-${dIdx}-C" style="display:${activeTab === 'C' ? 'block' : 'none'}">${renderEvents(d.eventsC, dIdx, 'C')}<button class="w-full py-2 border-2 border-dashed border-green-200 text-green-500 rounded text-sm hover:bg-green-50" onclick="addEvent(${dIdx}, 'C')">+ 추가</button></div>
-            `;
+                    <div class="flex justify-between items-end mb-4">
+                        <div class="w-1/3"><label class="text-xs font-bold text-gray-500">Day ${dIdx + 1} 날짜</label><input class="input-field font-bold" value="${d.date}" onchange="updateDay(${dIdx}, 'date', this.value)"></div>
+                        <div class="w-1/2 ml-2"><label class="text-xs font-bold text-gray-500">테마</label><input class="input-field" value="${d.title}" onchange="updateDay(${dIdx}, 'title', this.value)"></div>
+                        <button class="btn btn-red h-8 ml-2" onclick="removeDay(${dIdx})">Day 삭제</button>
+                    </div>
+                    ${tabHtml}
+                    <div id="list-${dIdx}-A" style="display:${activeTab === 'A' ? 'block' : 'none'}">${renderEvents(d.eventsA, dIdx, 'A')}<button class="w-full py-2 border-2 border-dashed border-blue-200 text-blue-500 rounded text-sm hover:bg-blue-50" onclick="addEvent(${dIdx}, 'A')">+ ${nameA} 추가</button></div>
+                    <div id="list-${dIdx}-B" style="display:${activeTab === 'B' ? 'block' : 'none'}">${renderEvents(d.eventsB, dIdx, 'B')}<button class="w-full py-2 border-2 border-dashed border-pink-200 text-pink-500 rounded text-sm hover:bg-pink-50" onclick="addEvent(${dIdx}, 'B')">+ 추가</button></div>
+                    <div id="list-${dIdx}-C" style="display:${activeTab === 'C' ? 'block' : 'none'}">${renderEvents(d.eventsC, dIdx, 'C')}<button class="w-full py-2 border-2 border-dashed border-green-200 text-green-500 rounded text-sm hover:bg-green-50" onclick="addEvent(${dIdx}, 'C')">+ 추가</button></div>
+                `;
                 dCont.appendChild(div);
 
-                // SortableJS 적용
                 if (activeTab === 'A') initSortable(dIdx, 'A');
                 if (activeTab === 'B') initSortable(dIdx, 'B');
                 if (activeTab === 'C') initSortable(dIdx, 'C');
@@ -401,38 +417,18 @@
         function initSortable(dIdx, plan) {
             const el = document.getElementById(`list-${dIdx}-${plan}`);
             if (!el) return;
-            // 이미 적용된 경우를 위해 destroy 시도? (여기선 매번 새로 그리므로 괜찮음)
-            // 이벤트 리스트 컨테이너가 버튼을 포함하고 있으므로, 이벤트 아이템만 드래그 가능하게 filter 설정 필요할 수도 있으나,
-            // 구조상 버튼은 리스트 밖이 아니라 안에 있음. 
-            // -> renderEvents가 div들을 리턴하고, 그 뒤에 버튼이 붙음.
-            // Sortable은 자식 요소들을 드래그함. 버튼도 드래그 될 수 있음.
-            // 해결: event-item 클래스를 가진 요소만 드래그 가능하게 설정 (draggable 옵션)
-
-            // 주의: renderEvents 결과물은 문자열임. 
-            // 렌더링 구조를 보면 <div id="list..."> {renderEvents} <button>...</div> 형태임.
-            // 따라서 Sortable을 적용하면 버튼도 같이 섞일 수 있음.
-            // 이를 방지하기 위해 이벤트를 감싸는 별도 div를 두는 게 좋음.
-            // 하지만 HTML 구조를 크게 안 바꾸려면 filter나 draggable 옵션 사용.
-
-            // 여기서는 간단히 event-item만 draggable로 설정.
             new Sortable(el, {
                 animation: 150,
-                handle: '.handle', // 핸들 사용
-                draggable: '.event-item', // 이 클래스만 드래그 가능
+                handle: '.handle',
+                draggable: '.event-item',
                 onEnd: function (evt) {
-                    // 데이터 순서 변경
                     const oldIdx = evt.oldIndex;
                     const newIdx = evt.newIndex;
-
-                    // 버튼이 마지막에 있어서 newIdx가 배열 길이와 같을 수 있음.
-                    // 하지만 draggable이 .event-item이라 버튼은 무시될 것임.
-                    // 데이터 배열 가져오기
                     let arr;
                     if (plan === 'A') arr = tripData.days[dIdx].eventsA;
                     else if (plan === 'B') arr = tripData.days[dIdx].eventsB;
                     else arr = tripData.days[dIdx].eventsC;
 
-                    // 배열 순서 변경
                     if (oldIdx !== newIdx) {
                         const item = arr.splice(oldIdx, 1)[0];
                         arr.splice(newIdx, 0, item);
@@ -441,7 +437,6 @@
             });
         }
 
-        // ⭐ 중요: 모바일 UI 패치 적용된 이벤트 렌더링 함수
         function renderEvents(events, dIdx, planType) {
             if (!events) return '';
             let typeClass = planType === 'B' ? 'plan-b' : (planType === 'C' ? 'plan-c' : '');
@@ -456,29 +451,25 @@
                     commonCheck = `<div class="flex items-center gap-1 mt-1 ml-1"><input type="checkbox" id="chk-com-${dIdx}-${eIdx}" ${e.isCommon ? 'checked' : ''} onchange="updateEvent(${dIdx}, ${eIdx}, 'A', 'isCommon', this.checked)"><label for="chk-com-${dIdx}-${eIdx}" class="text-xs font-bold text-yellow-600 cursor-pointer select-none">👑 다른 플랜에도 적용</label></div>`;
                 }
 
-                // ⭐ UI 개선: flex-col (세로 배치) -> sm:flex-row (PC에선 가로)
                 return `
-            <div class="event-item ${rowClass}">
-                <button class="absolute top-2 right-2 text-red-400 text-xs font-bold" onclick="removeEvent(${dIdx}, ${eIdx}, '${planType}')">X</button>
-                
-                <!-- 모바일: 세로 / PC: 가로 배치 -->
-                <div class="flex flex-col sm:flex-row gap-2 mb-2">
-                    <div class="flex gap-2 items-center">
-                        <div class="handle"><span style="font-size:1.2rem;">≡</span></div>
-                        <div class="time-select-group">
-                            <select class="time-select" onchange="updateTime(${dIdx}, ${eIdx}, '${planType}', 'h', this.value)">${getHourOpts(hh)}</select>
-                            <span>:</span>
-                            <select class="time-select" onchange="updateTime(${dIdx}, ${eIdx}, '${planType}', 'm', this.value)">${getMinOpts(mm)}</select>
+                <div class="event-item ${rowClass}">
+                    <button class="absolute top-2 right-2 text-red-400 text-xs font-bold" onclick="removeEvent(${dIdx}, ${eIdx}, '${planType}')">X</button>
+                    <div class="flex flex-col sm:flex-row gap-2 mb-2">
+                        <div class="flex gap-2 items-center">
+                            <div class="handle"><span style="font-size:1.2rem;">≡</span></div>
+                            <div class="time-select-group">
+                                <select class="time-select" onchange="updateTime(${dIdx}, ${eIdx}, '${planType}', 'h', this.value)">${getHourOpts(hh)}</select>
+                                <span>:</span>
+                                <select class="time-select" onchange="updateTime(${dIdx}, ${eIdx}, '${planType}', 'm', this.value)">${getMinOpts(mm)}</select>
+                            </div>
+                            <select class="input-field w-24" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'type', this.value); updateEvent(${dIdx}, ${eIdx}, '${planType}', 'icon', this.options[this.selectedIndex].text.substring(0,2))">${opts}</select>
                         </div>
-                        <select class="input-field w-24" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'type', this.value); updateEvent(${dIdx}, ${eIdx}, '${planType}', 'icon', this.options[this.selectedIndex].text.substring(0,2))">${opts}</select>
+                        <input class="input-field flex-1 w-full" value="${e.title}" placeholder="제목 입력" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'title', this.value)">
                     </div>
-                    <input class="input-field flex-1 w-full" value="${e.title}" placeholder="제목 입력" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'title', this.value)">
-                </div>
-
-                <input class="input-field text-sm mb-1" value="${e.desc}" placeholder="설명 (메모)" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'desc', this.value)">
-                <div class="relative"><input class="input-field text-sm" value="${e.map || ''}" placeholder="구글맵 검색어" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'map', this.value)"></div>
-                ${commonCheck}
-            </div>`;
+                    <input class="input-field text-sm mb-1" value="${e.desc}" placeholder="설명 (메모)" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'desc', this.value)">
+                    <div class="relative"><input class="input-field text-sm" value="${e.map || ''}" placeholder="구글맵 검색어" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'map', this.value)"></div>
+                    ${commonCheck}
+                </div>`;
             }).join('');
         }
 
@@ -490,7 +481,14 @@
         function removeEvent(dIdx, eIdx, plan) { if (plan === 'A') tripData.days[dIdx].eventsA.splice(eIdx, 1); else if (plan === 'B') tripData.days[dIdx].eventsB.splice(eIdx, 1); else tripData.days[dIdx].eventsC.splice(eIdx, 1); render(); }
         function updateEvent(dIdx, eIdx, plan, key, val) { if (plan === 'A') tripData.days[dIdx].eventsA[eIdx][key] = val; else if (plan === 'B') tripData.days[dIdx].eventsB[eIdx][key] = val; else tripData.days[dIdx].eventsC[eIdx][key] = val; if (key === 'isCommon') render(); }
         function updateTime(dIdx, eIdx, plan, part, val) { let targetArr = (plan === 'A') ? tripData.days[dIdx].eventsA : (plan === 'B') ? tripData.days[dIdx].eventsB : tripData.days[dIdx].eventsC; let current = targetArr[eIdx].time || "09:00"; let [hh, mm] = current.split(':'); if (part === 'h') hh = val; else mm = val; targetArr[eIdx].time = `${hh}:${mm}`; }
-        function addCheck() { tripData.checks.push({ text: "", type: "all" }); render(); }
+        function addCheck() { tripData.checks.push({ text: "", plans: ['A', 'B', 'C'] }); render(); }
+        function toggleCheckPlan(idx, plan) {
+            const c = tripData.checks[idx];
+            if (!c.plans) c.plans = ['A', 'B', 'C'];
+            if (c.plans.includes(plan)) c.plans = c.plans.filter(p => p !== plan);
+            else c.plans.push(plan);
+            render();
+        }
         function addInfo() { tripData.infos.push({ label: "", val: "", type: "link" }); render(); }
         function saveWork() {
             tripData.title = document.getElementById('appTitle').value;
@@ -500,7 +498,7 @@
         }
 
         function exportJSON() {
-            saveWork(); // 최신 상태 저장
+            saveWork();
             const dataStr = JSON.stringify(tripData, null, 2);
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob);
@@ -528,7 +526,7 @@
                 }
             };
             reader.readAsText(file);
-            input.value = ''; // 초기화
+            input.value = '';
         }
 
         window.onload = function () {
