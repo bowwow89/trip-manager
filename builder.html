@@ -274,7 +274,7 @@
         <!-- 3. 일정 관리 -->
         <div class="card">
             <h2 class="text-xl font-bold mb-4">3. 상세 일정 (최대 10일)</h2>
-            <p class="text-sm text-gray-500 mb-4">💡 Plan A에서 <b>[👑 전체 적용]</b>을 체크하면 다른 플랜에도 자동으로 보입니다.<br>⌚시간순으로 입력하지 않아도 순서대로 정렬되어 표시됩니다.<br>🖱️ 일정을
+            <p class="text-sm text-gray-500 mb-4">💡 Plan A에서 <b>[👑 전체 적용]</b>을 체크하면 다른 플랜에도 자동으로 보입니다.<br>🖱️ 일정을
                 드래그하여 순서를 변경할 수 있습니다.</p>
             <div id="days-container"></div>
             <button onclick="addDay()" class="btn btn-blue w-full mt-4">+ 날짜(Day) 추가</button>
@@ -545,23 +545,211 @@
             const jsonStr = JSON.stringify(tripData);
             const compressed = LZString.compressToEncodedURIComponent(jsonStr);
             let baseUrl = window.location.href.replace('builder.html', 'index.html');
+            // 데이터 마이그레이션 (구버전 호환)
+            if (!c.plans) {
+                if (!c.type || c.type === 'all') c.plans = ['A', 'B', 'C'];
+                else c.plans = [c.type];
+            }
+
+            let btnGroup = '';
+            if (tripData.useMulti) {
+                const isA = c.plans.includes('A');
+                const isB = c.plans.includes('B');
+                const isC = c.plans.includes('C');
+                btnGroup = `
+                        <div class="flex gap-1">
+                            <button class="btn ${isA ? 'btn-blue' : 'btn-gray'} text-xs" onclick="toggleCheckPlan(${i}, 'A')" style="padding:4px 8px; ${!isA ? 'background:#e5e7eb; color:#9ca3af;' : ''}">A</button>
+                            <button class="btn ${isB ? 'btn-pink' : 'btn-gray'} text-xs" onclick="toggleCheckPlan(${i}, 'B')" style="padding:4px 8px; background:${isB ? '#ec4899' : '#e5e7eb'}; color:${isB ? 'white' : '#9ca3af'};">B</button>
+                            <button class="btn ${isC ? 'btn-green' : 'btn-gray'} text-xs" onclick="toggleCheckPlan(${i}, 'C')" style="padding:4px 8px; background:${isC ? '#10b981' : '#e5e7eb'}; color:${isC ? 'white' : '#9ca3af'};">C</button>
+                        </div>
+                    `;
+            }
+
+            cList.innerHTML += `<div class="flex gap-2 mb-2 items-center"><input class="input-field flex-1" value="${c.text}" placeholder="준비물" oninput="tripData.checks[${i}].text=this.value" style="margin-bottom:0;">${btnGroup}<button class="btn btn-red" onclick="tripData.checks.splice(${i},1); render();">삭제</button></div>`;
+        });
+
+        const dCont = document.getElementById('days-container');
+        dCont.innerHTML = '';
+        tripData.days.forEach((d, dIdx) => {
+            const activeTab = d._activeTab || 'A';
+            const nameA = tripData.useMulti ? (tripData.planA || 'Plan A') : '상세 일정';
+
+            let tabHtml = `<div class="plan-tab">`;
+            tabHtml += `<div class="tab-btn ${activeTab === 'A' ? 'active-a' : ''}" onclick="switchDayTab(${dIdx}, 'A')">${nameA}</div>`;
+            if (tripData.useMulti) {
+                tabHtml += `<div class="tab-btn ${activeTab === 'B' ? 'active-b' : ''}" onclick="switchDayTab(${dIdx}, 'B')">${tripData.planB || 'Plan B'}</div>`;
+                tabHtml += `<div class="tab-btn ${activeTab === 'C' ? 'active-c' : ''}" onclick="switchDayTab(${dIdx}, 'C')">${tripData.planC || 'Plan C'}</div>`;
+            }
+            tabHtml += `</div>`;
+
+            const div = document.createElement('div');
+            div.className = 'day-block';
+            div.innerHTML = `
+                    <div class="flex justify-between items-end mb-4">
+                        <div class="w-1/3"><label class="text-xs font-bold text-gray-500">Day ${dIdx + 1} 날짜</label><input class="input-field font-bold" value="${d.date}" onchange="updateDay(${dIdx}, 'date', this.value)"></div>
+                        <div class="w-1/2 ml-2"><label class="text-xs font-bold text-gray-500">테마</label><input class="input-field" value="${d.title}" onchange="updateDay(${dIdx}, 'title', this.value)"></div>
+                        <button class="btn btn-red h-8 ml-2" onclick="removeDay(${dIdx})">Day 삭제</button>
+                    </div>
+                    ${tabHtml}
+                    <div id="list-${dIdx}-A" style="display:${activeTab === 'A' ? 'block' : 'none'}">${renderEvents(d.eventsA, dIdx, 'A')}<button class="w-full py-2 border-2 border-dashed border-blue-200 text-blue-500 rounded text-sm hover:bg-blue-50" onclick="addEvent(${dIdx}, 'A')">+ ${nameA} 추가</button></div>
+                    <div id="list-${dIdx}-B" style="display:${activeTab === 'B' ? 'block' : 'none'}">${renderEvents(d.eventsB, dIdx, 'B')}<button class="w-full py-2 border-2 border-dashed border-pink-200 text-pink-500 rounded text-sm hover:bg-pink-50" onclick="addEvent(${dIdx}, 'B')">+ 추가</button></div>
+                    <div id="list-${dIdx}-C" style="display:${activeTab === 'C' ? 'block' : 'none'}">${renderEvents(d.eventsC, dIdx, 'C')}<button class="w-full py-2 border-2 border-dashed border-green-200 text-green-500 rounded text-sm hover:bg-green-50" onclick="addEvent(${dIdx}, 'C')">+ 추가</button></div>
+                `;
+            dCont.appendChild(div);
+
+            if (activeTab === 'A') initSortable(dIdx, 'A');
+            if (activeTab === 'B') initSortable(dIdx, 'B');
+            if (activeTab === 'C') initSortable(dIdx, 'C');
+        });
+
+        const iCont = document.getElementById('info-list');
+        iCont.innerHTML = '';
+        tripData.infos.forEach((info, i) => {
+            iCont.innerHTML += `<div class="flex gap-2 mb-2 items-center bg-gray-50 p-2 rounded border"><select class="input-field w-24" onchange="tripData.infos[${i}].type=this.value"><option value="tel">📞전화</option><option value="link">🔗링크</option></select><input class="input-field w-1/3" value="${info.label}" placeholder="이름" oninput="tripData.infos[${i}].label=this.value"><input class="input-field flex-1" value="${info.val}" placeholder="값" oninput="tripData.infos[${i}].val=this.value"><button class="btn btn-red" onclick="tripData.infos.splice(${i},1); render();">X</button></div>`;
+            iCont.querySelectorAll('select')[i].value = info.type;
+        });
+        }
+
+        function initSortable(dIdx, plan) {
+            const el = document.getElementById(`list-${dIdx}-${plan}`);
+            if (!el) return;
+            new Sortable(el, {
+                animation: 150,
+                handle: '.handle',
+                draggable: '.event-item',
+                onEnd: function (evt) {
+                    const oldIdx = evt.oldIndex;
+                    const newIdx = evt.newIndex;
+                    let arr;
+                    if (plan === 'A') arr = tripData.days[dIdx].eventsA;
+                    else if (plan === 'B') arr = tripData.days[dIdx].eventsB;
+                    else arr = tripData.days[dIdx].eventsC;
+
+                    if (oldIdx !== newIdx) {
+                        const item = arr.splice(oldIdx, 1)[0];
+                        arr.splice(newIdx, 0, item);
+                    }
+                }
+            });
+        }
+
+        function renderEvents(events, dIdx, planType) {
+            if (!events) return '';
+            let typeClass = planType === 'B' ? 'plan-b' : (planType === 'C' ? 'plan-c' : '');
+            return events.map((e, eIdx) => {
+                let opts = iconOpts.map(o => `<option value="${o.v}" ${e.type === o.v ? 'selected' : ''}>${o.l}</option>`).join('');
+                let [hh, mm] = (e.time || "09:00").split(':');
+                let commonCheck = '';
+                let rowClass = typeClass;
+
+                if (planType === 'A' && tripData.useMulti) {
+                    if (e.isCommon) rowClass += ' is-common';
+                    commonCheck = `<div class="flex items-center gap-1 mt-1 ml-1"><input type="checkbox" id="chk-com-${dIdx}-${eIdx}" ${e.isCommon ? 'checked' : ''} onchange="updateEvent(${dIdx}, ${eIdx}, 'A', 'isCommon', this.checked)"><label for="chk-com-${dIdx}-${eIdx}" class="text-xs font-bold text-yellow-600 cursor-pointer select-none">👑 다른 플랜에도 적용</label></div>`;
+                }
+
+                return `
+                <div class="event-item ${rowClass}">
+                    <button class="absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors" onclick="removeEvent(${dIdx}, ${eIdx}, '${planType}')" title="삭제">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                    <div class="flex flex-col sm:flex-row gap-2 mb-2">
+                        <div class="flex gap-2 items-center">
+                            <div class="handle"><span style="font-size:1.2rem;">≡</span></div>
+                            <div class="time-select-group">
+                                <select class="time-select" onchange="updateTime(${dIdx}, ${eIdx}, '${planType}', 'h', this.value)">${getHourOpts(hh)}</select>
+                                <span>:</span>
+                                <select class="time-select" onchange="updateTime(${dIdx}, ${eIdx}, '${planType}', 'm', this.value)">${getMinOpts(mm)}</select>
+                            </div>
+                            <select class="input-field w-24" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'type', this.value); updateEvent(${dIdx}, ${eIdx}, '${planType}', 'icon', this.options[this.selectedIndex].text.substring(0,2))">${opts}</select>
+                        </div>
+                        <input class="input-field flex-1 w-full" value="${e.title}" placeholder="제목 입력" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'title', this.value)">
+                    </div>
+                    <input class="input-field text-sm mb-1" value="${e.desc}" placeholder="설명 (메모)" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'desc', this.value)">
+                    <div class="relative"><input class="input-field text-sm" value="${e.map || ''}" placeholder="구글맵 검색어" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'map', this.value)"></div>
+                    ${commonCheck}
+                </div>`;
+            }).join('');
+        }
+
+        function updateDay(idx, key, val) { tripData.days[idx][key] = val; }
+        function removeDay(idx) { if (confirm('정말 삭제하시겠습니까?')) { tripData.days.splice(idx, 1); render(); } }
+        function addDay() { if (tripData.days.length >= 10) { alert('최대 10일까지 가능합니다.'); return; } tripData.days.push({ date: "Day " + (tripData.days.length + 1), title: "", eventsA: [], eventsB: [], eventsC: [] }); render(); }
+        function switchDayTab(dIdx, tab) { tripData.days[dIdx]._activeTab = tab; render(); }
+        function addEvent(dIdx, plan) { const newEv = { time: "09:00", type: "map", icon: "📍", title: "", desc: "", map: "", isCommon: false }; if (plan === 'A') tripData.days[dIdx].eventsA.push(newEv); else if (plan === 'B') tripData.days[dIdx].eventsB.push(newEv); else tripData.days[dIdx].eventsC.push(newEv); render(); }
+        function removeEvent(dIdx, eIdx, plan) { if (plan === 'A') tripData.days[dIdx].eventsA.splice(eIdx, 1); else if (plan === 'B') tripData.days[dIdx].eventsB.splice(eIdx, 1); else tripData.days[dIdx].eventsC.splice(eIdx, 1); render(); }
+        function updateEvent(dIdx, eIdx, plan, key, val) { if (plan === 'A') tripData.days[dIdx].eventsA[eIdx][key] = val; else if (plan === 'B') tripData.days[dIdx].eventsB[eIdx][key] = val; else tripData.days[dIdx].eventsC[eIdx][key] = val; if (key === 'isCommon') render(); }
+        function updateTime(dIdx, eIdx, plan, part, val) { let targetArr = (plan === 'A') ? tripData.days[dIdx].eventsA : (plan === 'B') ? tripData.days[dIdx].eventsB : tripData.days[dIdx].eventsC; let current = targetArr[eIdx].time || "09:00"; let [hh, mm] = current.split(':'); if (part === 'h') hh = val; else mm = val; targetArr[eIdx].time = `${hh}:${mm}`; }
+        function addCheck() { tripData.checks.push({ text: "", plans: ['A', 'B', 'C'] }); render(); }
+        function toggleCheckPlan(idx, plan) {
+            const c = tripData.checks[idx];
+            if (!c.plans) c.plans = ['A', 'B', 'C'];
+            if (c.plans.includes(plan)) c.plans = c.plans.filter(p => p !== plan);
+            else c.plans.push(plan);
+            render();
+        }
+        function addInfo() { tripData.infos.push({ label: "", val: "", type: "link" }); render(); }
+        function saveWork() {
+            tripData.title = document.getElementById('appTitle').value;
+            if (tripData.useMulti) { tripData.planA = document.getElementById('planAName').value; tripData.planB = document.getElementById('planBName').value; tripData.planC = document.getElementById('planCName').value; }
+            localStorage.setItem('myTripDataV11', JSON.stringify(tripData));
+            alert('저장되었습니다!');
+        }
+
+        function exportJSON() {
+            saveWork();
+            const dataStr = JSON.stringify(tripData, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `trip_plan_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importJSON(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    if (confirm('현재 작성 중인 내용이 덮어씌워집니다. 계속하시겠습니까?')) {
+                        tripData = json;
+                        render();
+                        alert('불러오기 완료!');
+                    }
+                } catch (err) {
+                    alert('잘못된 파일 형식입니다.');
+                }
+            };
+            reader.readAsText(file);
+            input.value = '';
+        }
+
+        window.onload = function () {
+            const saved = localStorage.getItem('myTripDataV11');
+            if (saved && confirm('이전 작업을 불러올까요?')) tripData = JSON.parse(saved);
+            render();
+        }
+
+        function getViewerUrl() {
+            saveWork();
+            const jsonStr = JSON.stringify(tripData);
+            const compressed = LZString.compressToEncodedURIComponent(jsonStr);
+            let baseUrl = window.location.href.replace('builder.html', 'index.html');
             if (!baseUrl.includes('index.html')) {
                 baseUrl = baseUrl.split('?')[0];
                 baseUrl = baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1) + 'index.html';
             }
             return baseUrl + "#data=" + compressed;
         }
-
-        function openApp() { window.open(getViewerUrl(), '_blank'); }
-        function copyLink() { navigator.clipboard.writeText(getViewerUrl()).then(() => alert("링크가 복사되었습니다!")); }
-
         async function shortenUrl() {
-            let token = localStorage.getItem('bitlyToken');
-            if (!token) {
-                token = prompt("Bit.ly Access Token을 입력해주세요.\n(https://app.bitly.com/settings/api/ 에서 발급 가능)");
-                if (!token) return;
-                localStorage.setItem('bitlyToken', token);
-            }
+            // ⚠️ 주의: 이 토큰은 소스보기를 통해 다른 사람에게 노출될 수 있습니다.
+            // 개인적인 용도로만 사용하시거나, 신뢰할 수 있는 환경에서만 사용하세요.
+            const token = "ae057f836dae9c3ceb3455830c543f00f18bb648";
 
             const longUrl = getViewerUrl();
             try {
@@ -579,8 +767,7 @@
 
                 if (!response.ok) {
                     if (response.status === 403) {
-                        alert("토큰이 올바르지 않거나 만료되었습니다. 다시 입력해주세요.");
-                        localStorage.removeItem('bitlyToken');
+                        alert("토큰이 올바르지 않거나 만료되었습니다. 토큰을 확인해주세요.");
                     } else {
                         const err = await response.json();
                         alert(`오류 발생: ${err.description || '알 수 없는 오류'}`);
@@ -599,6 +786,3 @@
 </body>
 
 </html>
-
-
-
