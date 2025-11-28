@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 
@@ -502,6 +503,7 @@
             alert('저장되었습니다!');
         }
 
+
         function exportJSON() {
             saveWork();
             const dataStr = JSON.stringify(tripData, null, 2);
@@ -552,16 +554,10 @@
             return baseUrl + "#data=" + compressed;
         }
 
-        function openApp() { window.open(getViewerUrl(), '_blank'); }
-        function copyLink() { navigator.clipboard.writeText(getViewerUrl()).then(() => alert("링크가 복사되었습니다!")); }
-
         async function shortenUrl() {
-            let token = localStorage.getItem('bitlyToken');
-            if (!token) {
-                token = prompt("Bit.ly Access Token을 입력해주세요.\n(https://app.bitly.com/settings/api/ 에서 발급 가능)");
-                if (!token) return;
-                localStorage.setItem('bitlyToken', token);
-            }
+            // ⚠️ 주의: 이 토큰은 소스보기를 통해 다른 사람에게 노출될 수 있습니다.
+            // 개인적인 용도로만 사용하시거나, 신뢰할 수 있는 환경에서만 사용하세요.
+            const token = "ae057f836dae9c3ceb3455830c543f00f18bb648";
 
             const longUrl = getViewerUrl();
             try {
@@ -579,8 +575,7 @@
 
                 if (!response.ok) {
                     if (response.status === 403) {
-                        alert("토큰이 올바르지 않거나 만료되었습니다. 다시 입력해주세요.");
-                        localStorage.removeItem('bitlyToken');
+                        alert("토큰이 올바르지 않거나 만료되었습니다. 토큰을 확인해주세요.");
                     } else {
                         const err = await response.json();
                         alert(`오류 발생: ${err.description || '알 수 없는 오류'}`);
