@@ -341,216 +341,59 @@
             document.getElementById('appTitle').value = tripData.title;
             document.getElementById('themeColor').value = tripData.theme;
             document.getElementById('chkMultiPlan').checked = tripData.useMulti;
-            document.getElementById('multiPlanInputs').style.display = tripData.useMulti ? 'grid' : 'none';
-            document.getElementById('planAName').value = tripData.planA;
-            document.getElementById('planBName').value = tripData.planB;
-            document.getElementById('planCName').value = tripData.planC;
 
-            const cList = document.getElementById('check-list');
-            cList.innerHTML = '';
-            tripData.checks.forEach((c, i) => {
-                let typeOpts = `<option value="all">공통</option>`;
-                if (tripData.useMulti) typeOpts += `<option value="A">Plan A</option><option value="B">Plan B</option><option value="C">Plan C</option>`;
-                cList.innerHTML += `<div class="flex gap-2 mb-2"><input class="input-field flex-1" value="${c.text}" placeholder="준비물" oninput="tripData.checks[${i}].text=this.value"><select class="input-field w-28" onchange="tripData.checks[${i}].type=this.value" style="font-size:0.8rem;">${typeOpts}</select><button class="btn btn-red" onclick="tripData.checks.splice(${i},1); render();">삭제</button></div>`;
-                cList.querySelectorAll('select')[i].value = c.type || 'all';
-            });
-
-            const dCont = document.getElementById('days-container');
-            dCont.innerHTML = '';
-            tripData.days.forEach((d, dIdx) => {
-                const activeTab = d._activeTab || 'A';
-                const nameA = tripData.useMulti ? (tripData.planA || 'Plan A') : '상세 일정';
-
-                let tabHtml = `<div class="plan-tab">`;
-                tabHtml += `<div class="tab-btn ${activeTab === 'A' ? 'active-a' : ''}" onclick="switchDayTab(${dIdx}, 'A')">${nameA}</div>`;
-                if (tripData.useMulti) {
-                    tabHtml += `<div class="tab-btn ${activeTab === 'B' ? 'active-b' : ''}" onclick="switchDayTab(${dIdx}, 'B')">${tripData.planB || 'Plan B'}</div>`;
-                    tabHtml += `<div class="tab-btn ${activeTab === 'C' ? 'active-c' : ''}" onclick="switchDayTab(${dIdx}, 'C')">${tripData.planC || 'Plan C'}</div>`;
-                }
-                tabHtml += `</div>`;
-
-                const div = document.createElement('div');
-                div.className = 'day-block';
-                div.innerHTML = `
-                <div class="flex justify-between items-end mb-4">
-                    <div class="w-1/3"><label class="text-xs font-bold text-gray-500">Day ${dIdx + 1} 날짜</label><input class="input-field font-bold" value="${d.date}" onchange="updateDay(${dIdx}, 'date', this.value)"></div>
-                    <div class="w-1/2 ml-2"><label class="text-xs font-bold text-gray-500">테마</label><input class="input-field" value="${d.title}" onchange="updateDay(${dIdx}, 'title', this.value)"></div>
-                    <button class="btn btn-red h-8 ml-2" onclick="removeDay(${dIdx})">Day 삭제</button>
-                </div>
-                ${tabHtml}
-                <div id="list-${dIdx}-A" style="display:${activeTab === 'A' ? 'block' : 'none'}">${renderEvents(d.eventsA, dIdx, 'A')}<button class="w-full py-2 border-2 border-dashed border-blue-200 text-blue-500 rounded text-sm hover:bg-blue-50" onclick="addEvent(${dIdx}, 'A')">+ ${nameA} 추가</button></div>
-                <div id="list-${dIdx}-B" style="display:${activeTab === 'B' ? 'block' : 'none'}">${renderEvents(d.eventsB, dIdx, 'B')}<button class="w-full py-2 border-2 border-dashed border-pink-200 text-pink-500 rounded text-sm hover:bg-pink-50" onclick="addEvent(${dIdx}, 'B')">+ 추가</button></div>
-                <div id="list-${dIdx}-C" style="display:${activeTab === 'C' ? 'block' : 'none'}">${renderEvents(d.eventsC, dIdx, 'C')}<button class="w-full py-2 border-2 border-dashed border-green-200 text-green-500 rounded text-sm hover:bg-green-50" onclick="addEvent(${dIdx}, 'C')">+ 추가</button></div>
-            `;
-                dCont.appendChild(div);
-
-                // SortableJS 적용
-                if (activeTab === 'A') initSortable(dIdx, 'A');
-                if (activeTab === 'B') initSortable(dIdx, 'B');
-                if (activeTab === 'C') initSortable(dIdx, 'C');
-            });
-
-            const iCont = document.getElementById('info-list');
-            iCont.innerHTML = '';
-            tripData.infos.forEach((info, i) => {
-                iCont.innerHTML += `<div class="flex gap-2 mb-2 items-center bg-gray-50 p-2 rounded border"><select class="input-field w-24" onchange="tripData.infos[${i}].type=this.value"><option value="tel">📞전화</option><option value="link">🔗링크</option></select><input class="input-field w-1/3" value="${info.label}" placeholder="이름" oninput="tripData.infos[${i}].label=this.value"><input class="input-field flex-1" value="${info.val}" placeholder="값" oninput="tripData.infos[${i}].val=this.value"><button class="btn btn-red" onclick="tripData.infos.splice(${i},1); render();">X</button></div>`;
-                iCont.querySelectorAll('select')[i].value = info.type;
-            });
-        }
-
-        function initSortable(dIdx, plan) {
-            const el = document.getElementById(`list-${dIdx}-${plan}`);
-            if (!el) return;
-            // 이미 적용된 경우를 위해 destroy 시도? (여기선 매번 새로 그리므로 괜찮음)
-            // 이벤트 리스트 컨테이너가 버튼을 포함하고 있으므로, 이벤트 아이템만 드래그 가능하게 filter 설정 필요할 수도 있으나,
-            // 구조상 버튼은 리스트 밖이 아니라 안에 있음. 
-            // -> renderEvents가 div들을 리턴하고, 그 뒤에 버튼이 붙음.
-            // Sortable은 자식 요소들을 드래그함. 버튼도 드래그 될 수 있음.
-            // 해결: event-item 클래스를 가진 요소만 드래그 가능하게 설정 (draggable 옵션)
-
-            // 주의: renderEvents 결과물은 문자열임. 
-            // 렌더링 구조를 보면 <div id="list..."> {renderEvents} <button>...</div> 형태임.
-            // 따라서 Sortable을 적용하면 버튼도 같이 섞일 수 있음.
-            // 이를 방지하기 위해 이벤트를 감싸는 별도 div를 두는 게 좋음.
-            // 하지만 HTML 구조를 크게 안 바꾸려면 filter나 draggable 옵션 사용.
-
-            // 여기서는 간단히 event-item만 draggable로 설정.
-            new Sortable(el, {
-                animation: 150,
-                handle: '.handle', // 핸들 사용
-                draggable: '.event-item', // 이 클래스만 드래그 가능
-                onEnd: function (evt) {
-                    // 데이터 순서 변경
-                    const oldIdx = evt.oldIndex;
-                    const newIdx = evt.newIndex;
-
-                    // 버튼이 마지막에 있어서 newIdx가 배열 길이와 같을 수 있음.
-                    // 하지만 draggable이 .event-item이라 버튼은 무시될 것임.
-                    // 데이터 배열 가져오기
-                    let arr;
-                    if (plan === 'A') arr = tripData.days[dIdx].eventsA;
-                    else if (plan === 'B') arr = tripData.days[dIdx].eventsB;
-                    else arr = tripData.days[dIdx].eventsC;
-
-                    // 배열 순서 변경
-                    if (oldIdx !== newIdx) {
-                        const item = arr.splice(oldIdx, 1)[0];
-                        arr.splice(newIdx, 0, item);
-                    }
-                }
-            });
-        }
-
-        // ⭐ 중요: 모바일 UI 패치 적용된 이벤트 렌더링 함수
-        function renderEvents(events, dIdx, planType) {
-            if (!events) return '';
-            let typeClass = planType === 'B' ? 'plan-b' : (planType === 'C' ? 'plan-c' : '');
-            return events.map((e, eIdx) => {
-                let opts = iconOpts.map(o => `<option value="${o.v}" ${e.type === o.v ? 'selected' : ''}>${o.l}</option>`).join('');
-                let [hh, mm] = (e.time || "09:00").split(':');
-                let commonCheck = '';
-                let rowClass = typeClass;
-
-                if (planType === 'A' && tripData.useMulti) {
-                    if (e.isCommon) rowClass += ' is-common';
-                    commonCheck = `<div class="flex items-center gap-1 mt-1 ml-1"><input type="checkbox" id="chk-com-${dIdx}-${eIdx}" ${e.isCommon ? 'checked' : ''} onchange="updateEvent(${dIdx}, ${eIdx}, 'A', 'isCommon', this.checked)"><label for="chk-com-${dIdx}-${eIdx}" class="text-xs font-bold text-yellow-600 cursor-pointer select-none">👑 다른 플랜에도 적용</label></div>`;
-                }
-
-                // ⭐ UI 개선: flex-col (세로 배치) -> sm:flex-row (PC에선 가로)
-                return `
-            <div class="event-item ${rowClass}">
-                <button class="absolute top-2 right-2 text-red-400 text-xs font-bold" onclick="removeEvent(${dIdx}, ${eIdx}, '${planType}')">X</button>
-                
-                <!-- 모바일: 세로 / PC: 가로 배치 -->
-                <div class="flex flex-col sm:flex-row gap-2 mb-2">
-                    <div class="flex gap-2 items-center">
-                        <div class="handle"><span style="font-size:1.2rem;">≡</span></div>
-                        <div class="time-select-group">
-                            <select class="time-select" onchange="updateTime(${dIdx}, ${eIdx}, '${planType}', 'h', this.value)">${getHourOpts(hh)}</select>
-                            <span>:</span>
-                            <select class="time-select" onchange="updateTime(${dIdx}, ${eIdx}, '${planType}', 'm', this.value)">${getMinOpts(mm)}</select>
-                        </div>
-                        <select class="input-field w-24" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'type', this.value); updateEvent(${dIdx}, ${eIdx}, '${planType}', 'icon', this.options[this.selectedIndex].text.substring(0,2))">${opts}</select>
-                    </div>
-                    <input class="input-field flex-1 w-full" value="${e.title}" placeholder="제목 입력" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'title', this.value)">
-                </div>
-
-                <input class="input-field text-sm mb-1" value="${e.desc}" placeholder="설명 (메모)" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'desc', this.value)">
-                <div class="relative"><input class="input-field text-sm" value="${e.map || ''}" placeholder="구글맵 검색어" onchange="updateEvent(${dIdx}, ${eIdx}, '${planType}', 'map', this.value)"></div>
-                ${commonCheck}
-            </div>`;
-            }).join('');
-        }
-
-        function updateDay(idx, key, val) { tripData.days[idx][key] = val; }
-        function removeDay(idx) { if (confirm('정말 삭제하시겠습니까?')) { tripData.days.splice(idx, 1); render(); } }
-        function addDay() { if (tripData.days.length >= 10) { alert('최대 10일까지 가능합니다.'); return; } tripData.days.push({ date: "Day " + (tripData.days.length + 1), title: "", eventsA: [], eventsB: [], eventsC: [] }); render(); }
-        function switchDayTab(dIdx, tab) { tripData.days[dIdx]._activeTab = tab; render(); }
-        function addEvent(dIdx, plan) { const newEv = { time: "09:00", type: "map", icon: "📍", title: "", desc: "", map: "", isCommon: false }; if (plan === 'A') tripData.days[dIdx].eventsA.push(newEv); else if (plan === 'B') tripData.days[dIdx].eventsB.push(newEv); else tripData.days[dIdx].eventsC.push(newEv); render(); }
-        function removeEvent(dIdx, eIdx, plan) { if (plan === 'A') tripData.days[dIdx].eventsA.splice(eIdx, 1); else if (plan === 'B') tripData.days[dIdx].eventsB.splice(eIdx, 1); else tripData.days[dIdx].eventsC.splice(eIdx, 1); render(); }
-        function updateEvent(dIdx, eIdx, plan, key, val) { if (plan === 'A') tripData.days[dIdx].eventsA[eIdx][key] = val; else if (plan === 'B') tripData.days[dIdx].eventsB[eIdx][key] = val; else tripData.days[dIdx].eventsC[eIdx][key] = val; if (key === 'isCommon') render(); }
-        function updateTime(dIdx, eIdx, plan, part, val) { let targetArr = (plan === 'A') ? tripData.days[dIdx].eventsA : (plan === 'B') ? tripData.days[dIdx].eventsB : tripData.days[dIdx].eventsC; let current = targetArr[eIdx].time || "09:00"; let [hh, mm] = current.split(':'); if (part === 'h') hh = val; else mm = val; targetArr[eIdx].time = `${hh}:${mm}`; }
-        function addCheck() { tripData.checks.push({ text: "", type: "all" }); render(); }
-        function addInfo() { tripData.infos.push({ label: "", val: "", type: "link" }); render(); }
-        function saveWork() {
-            tripData.title = document.getElementById('appTitle').value;
-            if (tripData.useMulti) { tripData.planA = document.getElementById('planAName').value; tripData.planB = document.getElementById('planBName').value; tripData.planC = document.getElementById('planCName').value; }
-            localStorage.setItem('myTripDataV11', JSON.stringify(tripData));
-            alert('저장되었습니다!');
-        }
-
-        function exportJSON() {
-            saveWork(); // 최신 상태 저장
-            const dataStr = JSON.stringify(tripData, null, 2);
-            const blob = new Blob([dataStr], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `trip_plan_${new Date().toISOString().slice(0, 10)}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function importJSON(input) {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                try {
-                    const json = JSON.parse(e.target.result);
-                    if (confirm('현재 작성 중인 내용이 덮어씌워집니다. 계속하시겠습니까?')) {
-                        tripData = json;
-                        render();
-                        alert('불러오기 완료!');
-                    }
-                } catch (err) {
-                    alert('잘못된 파일 형식입니다.');
-                }
-            };
-            reader.readAsText(file);
-            input.value = ''; // 초기화
-        }
-
-        window.onload = function () {
-            const saved = localStorage.getItem('myTripDataV11');
-            if (saved && confirm('이전 작업을 불러올까요?')) tripData = JSON.parse(saved);
-            render();
-        }
-
-        function getViewerUrl() {
-            saveWork();
-            const jsonStr = JSON.stringify(tripData);
-            const compressed = LZString.compressToEncodedURIComponent(jsonStr);
-            let baseUrl = window.location.href.replace('builder.html', 'index.html');
-            if (!baseUrl.includes('index.html')) {
-                baseUrl = baseUrl.split('?')[0];
-                baseUrl = baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1) + 'index.html';
+            function exportJSON() {
+                saveWork(); // 최신 상태 저장
+                const dataStr = JSON.stringify(tripData, null, 2);
+                const blob = new Blob([dataStr], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `trip_plan_${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
             }
-            return baseUrl + "#data=" + compressed;
-        }
 
-        function openApp() { window.open(getViewerUrl(), '_blank'); }
-        function copyLink() { navigator.clipboard.writeText(getViewerUrl()).then(() => alert("링크가 복사되었습니다!")); }
+            function importJSON(input) {
+                const file = input.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        const json = JSON.parse(e.target.result);
+                        if (confirm('현재 작성 중인 내용이 덮어씌워집니다. 계속하시겠습니까?')) {
+                            tripData = json;
+                            render();
+                            alert('불러오기 완료!');
+                        }
+                    } catch (err) {
+                        alert('잘못된 파일 형식입니다.');
+                    }
+                };
+                reader.readAsText(file);
+                input.value = ''; // 초기화
+            }
+
+            window.onload = function () {
+                const saved = localStorage.getItem('myTripDataV11');
+                if (saved && confirm('이전 작업을 불러올까요?')) tripData = JSON.parse(saved);
+                render();
+            }
+
+            function getViewerUrl() {
+                saveWork();
+                const jsonStr = JSON.stringify(tripData);
+                const compressed = LZString.compressToEncodedURIComponent(jsonStr);
+                let baseUrl = window.location.href.replace('builder.html', 'index.html');
+                if (!baseUrl.includes('index.html')) {
+                    baseUrl = baseUrl.split('?')[0];
+                    baseUrl = baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1) + 'index.html';
+                }
+                return baseUrl + "#data=" + compressed;
+            }
+
+            function openApp() { window.open(getViewerUrl(), '_blank'); }
+            function copyLink() { navigator.clipboard.writeText(getViewerUrl()).then(() => alert("링크가 복사되었습니다!")); }
     </script>
 </body>
 
