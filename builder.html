@@ -292,6 +292,7 @@
         <div class="container flex gap-2">
             <button onclick="openApp()" class="btn btn-green flex-1">🚀 앱 실행</button>
             <button onclick="copyLink()" class="btn btn-dark w-24">🔗 복사</button>
+            <button onclick="shortenUrl()" class="btn btn-purple w-24">✂️ 단축</button>
         </div>
     </div>
 
@@ -553,9 +554,51 @@
 
         function openApp() { window.open(getViewerUrl(), '_blank'); }
         function copyLink() { navigator.clipboard.writeText(getViewerUrl()).then(() => alert("링크가 복사되었습니다!")); }
+
+        async function shortenUrl() {
+            let token = localStorage.getItem('bitlyToken');
+            if (!token) {
+                token = prompt("Bit.ly Access Token을 입력해주세요.\n(https://app.bitly.com/settings/api/ 에서 발급 가능)");
+                if (!token) return;
+                localStorage.setItem('bitlyToken', token);
+            }
+
+            const longUrl = getViewerUrl();
+            try {
+                const response = await fetch('https://api-ssl.bitly.com/v4/shorten', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        long_url: longUrl,
+                        domain: "bit.ly"
+                    })
+                });
+
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        alert("토큰이 올바르지 않거나 만료되었습니다. 다시 입력해주세요.");
+                        localStorage.removeItem('bitlyToken');
+                    } else {
+                        const err = await response.json();
+                        alert(`오류 발생: ${err.description || '알 수 없는 오류'}`);
+                    }
+                    return;
+                }
+
+                const data = await response.json();
+                prompt("단축된 URL입니다. 복사해서 사용하세요!", data.link);
+            } catch (e) {
+                alert("네트워크 오류가 발생했습니다.");
+                console.error(e);
+            }
+        }
     </script>
 </body>
 
 </html>
+
 
 
