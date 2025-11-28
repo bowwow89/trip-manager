@@ -38,11 +38,11 @@
 
     .event-item { display: flex; gap: 12px; margin-bottom: 20px; position: relative; animation: fadeIn 0.3s ease-out; background: white; padding: 10px; border-radius: 12px; border: 1px solid #eee; }
     
-    /* ⭐ 플랜별 색상 구분 (뷰어용) */
-    .event-item.is-common { background-color: #fffbeb; border-left: 4px solid #f59e0b; } /* 공통: 노랑 */
-    .event-item.plan-a { background-color: #eff6ff; border-left: 4px solid #3b82f6; } /* A: 파랑 */
-    .event-item.plan-b { background-color: #fff1f2; border-left: 4px solid #ec4899; } /* B: 핑크 */
-    .event-item.plan-c { background-color: #ecfdf5; border-left: 4px solid #10b981; } /* C: 초록 */
+    /* ⭐ 플랜별 색상 구분 */
+    .event-item.is-common { background-color: #fffbeb; border-left: 4px solid #f59e0b; } 
+    .event-item.plan-a { background-color: #eff6ff; border-left: 4px solid #3b82f6; } 
+    .event-item.plan-b { background-color: #fff1f2; border-left: 4px solid #ec4899; } 
+    .event-item.plan-c { background-color: #ecfdf5; border-left: 4px solid #10b981; } 
 
     .event-item::before { content: ''; position: absolute; left: 29px; top: 35px; bottom: -20px; width: 2px; background: #e5e7eb; z-index: 0; }
     .event-item:last-child::before { display: none; }
@@ -114,39 +114,13 @@
     let TRIP_DATA = null;
     let state = { tab: 'sch', dayIdx: 0, mode: 'A', checked: {} };
 
-    // 압축 해제 함수
-    function expandData(minified) {
-        if(!minified) return null;
-        if(minified.title) return minified; // 구버전 호환
-
-        return {
-            title: minified.t, theme: minified.th, useMulti: minified.um,
-            planA: minified.pa, planB: minified.pb, planC: minified.pc,
-            checks: (minified.ck || []).map(c => ({text:c.x, type:c.y})),
-            infos: (minified.if || []).map(i => ({label:i.l, val:i.v, type:i.y})),
-            days: (minified.ds || []).map(d => ({
-                date: d.d, title: d.t,
-                eventsA: (d.ea || []).map(e => ({time:e.t, type:e.y, icon:e.i, title:e.l, desc:e.d, map:e.m, isCommon:e.c===1})),
-                eventsB: (d.eb || []).map(e => ({time:e.t, type:e.y, icon:e.i, title:e.l, desc:e.d, map:e.m})),
-                eventsC: (d.ecp || []).map(e => ({time:e.t, type:e.y, icon:e.i, title:e.l, desc:e.d, map:e.m}))
-            }))
-        };
-    }
-
     function loadData() {
         const hash = window.location.hash;
-        if (hash) {
+        if (hash && hash.startsWith('#data=')) {
             try {
-                let compressed = '';
-                if(hash.startsWith('#d=')) {
-                    compressed = hash.substring(3); 
-                    const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
-                    TRIP_DATA = expandData(JSON.parse(jsonStr));
-                } else if(hash.startsWith('#data=')) {
-                    compressed = hash.substring(6); 
-                    const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
-                    TRIP_DATA = JSON.parse(jsonStr);
-                }
+                const compressed = hash.substring(6);
+                const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
+                if (jsonStr) TRIP_DATA = JSON.parse(jsonStr);
             } catch (e) { console.error("Data Load Error", e); }
         }
 
@@ -246,8 +220,7 @@
             events.forEach(e => {
                 const mapBtn = e.map ? `<button onclick="openMap('${e.map}')" class="btn-map">📍 구글맵</button>` : '';
                 
-                // ⭐ 여기서 플랜별 색상 클래스 부여
-                let planClass = 'plan-a'; // 기본 A
+                let planClass = 'plan-a'; 
                 if(e.isCommon) planClass = 'is-common';
                 else if(state.mode === 'B') planClass = 'plan-b';
                 else if(state.mode === 'C') planClass = 'plan-c';
@@ -324,7 +297,7 @@
 
         let html = '<div class="card"><div class="card-title">ℹ️ 여행 정보</div>';
         TRIP_DATA.infos.forEach(info => {
-            const isTel = info.type === 'tel';
+            const isTel = (info.type === 'tel') || (!info.type && /^[0-9\-\+\(\)\s]+$/.test(info.val));
             const action = isTel ? `safeCall('${info.val}')` : `window.open('${info.val}')`;
             const icon = isTel ? '📞' : '🔗';
             const btnClass = isTel ? 'tel' : 'link';
@@ -332,7 +305,7 @@
 
             html += `
             <div class="info-item" onclick="${action}">
-                <div class="info-label">${icon} ${info.label}</div>
+                <div class="info-label"><span style="margin-right:5px;">${icon}</span> ${info.label}</div>
                 <span class="info-btn ${btnClass}">${btnText}</span>
             </div>`;
         });
