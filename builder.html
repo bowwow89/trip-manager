@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 
@@ -552,6 +551,21 @@
                 baseUrl = baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1) + 'index.html';
             }
             return baseUrl + "#data=" + compressed;
+        }
+
+        function openApp() {
+            const url = getViewerUrl();
+            window.open(url, '_blank');
+        }
+
+        function copyLink() {
+            const url = getViewerUrl();
+            navigator.clipboard.writeText(url).then(() => {
+                alert('링크가 복사되었습니다!');
+            }).catch(err => {
+                console.error('복사 실패:', err);
+                prompt('복사해서 사용하세요:', url);
+            });
         }
 
         async function shortenUrl() {
