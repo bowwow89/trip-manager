@@ -1,761 +1,277 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>여행 가이드</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
-    <style>
-        /* 기본 스타일 */
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #f3f4f6;
-            color: #1f2937;
-            height: 100dvh;
-            display: flex;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .app-container {
-            width: 100%;
-            max-width: 480px;
-            height: 100%;
-            background-color: #fff;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-
-        header {
-            padding: 1.5rem;
-            padding-bottom: 1rem;
-            color: white;
-            transition: 0.3s;
-            z-index: 10;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border-radius: 0 0 1.5rem 1.5rem;
-            flex-shrink: 0;
-        }
-
-        header.shrink {
-            padding: 0.8rem 1rem;
-            border-radius: 0 0 1rem 1rem;
-        }
-
-        .bg-blue {
-            background: linear-gradient(to right, #3b82f6, #06b6d4);
-        }
-
-        .bg-pink {
-            background: linear-gradient(to right, #ec4899, #f43f5e);
-        }
-
-        .bg-green {
-            background: linear-gradient(to right, #10b981, #059669);
-        }
-
-        .bg-purple {
-            background: linear-gradient(to right, #8b5cf6, #6366f1);
-        }
-
-        .bg-gray {
-            background: #4b5563;
-        }
-
-        .title {
-            font-size: 1.5rem;
-            font-weight: 800;
-            margin-bottom: 5px;
-        }
-
-        header.shrink .title {
-            font-size: 1.1rem;
-            margin: 0;
-        }
-
-        .mode-toggle {
-            display: flex;
-            background: rgba(0, 0, 0, 0.15);
-            border-radius: 99px;
-            padding: 3px;
-            margin-top: 10px;
-            width: fit-content;
-            max-width: 100%;
-            overflow-x: auto;
-            gap: 4px;
-        }
-
-        header.shrink .mode-toggle {
-            display: none;
-        }
-
-        .mode-btn {
-            padding: 5px 12px;
-            border-radius: 99px;
-            border: none;
-            font-size: 0.85rem;
-            font-weight: bold;
-            cursor: pointer;
-            color: rgba(255, 255, 255, 0.8);
-            background: transparent;
-            white-space: nowrap;
-            transition: 0.2s;
-        }
-
-        .mode-btn.active {
-            background: white;
-            color: #333;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-        }
-
-        main {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1rem;
-            padding-bottom: 5rem;
-            scroll-behavior: smooth;
-        }
-
-        .card {
-            background: white;
-            border-radius: 1rem;
-            padding: 1rem;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            margin-bottom: 1rem;
-            border: 1px solid #f3f4f6;
-        }
-
-        .card-title {
-            font-size: 1.1rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-            color: #374151;
-            border-bottom: 2px solid #f3f4f6;
-            padding-bottom: 0.5rem;
-        }
-
-        .day-tabs {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            padding-bottom: 5px;
-            margin-bottom: 10px;
-        }
-
-        .day-tabs::-webkit-scrollbar {
-            display: none;
-        }
-
-        .day-btn {
-            white-space: nowrap;
-            padding: 8px 14px;
-            border-radius: 99px;
-            font-size: 0.9rem;
-            font-weight: bold;
-            border: none;
-            background: #f3f4f6;
-            color: #6b7280;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .day-btn.active {
-            background: #1f2937;
-            color: white;
-            transform: scale(1.05);
-        }
-
-        .event-item {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
-            position: relative;
-            animation: fadeIn 0.3s ease-out;
-            background: white;
-            padding: 10px;
-            border-radius: 12px;
-            border: 1px solid #eee;
-        }
-
-        /* ⭐ 플랜별 색상 구분 */
-        .event-item.is-common {
-            background-color: #fffbeb;
-            border-left: 4px solid #f59e0b;
-        }
-
-        .event-item.plan-a {
-            background-color: #eff6ff;
-            border-left: 4px solid #3b82f6;
-        }
-
-        .event-item.plan-b {
-            background-color: #fff1f2;
-            border-left: 4px solid #ec4899;
-        }
-
-        .event-item.plan-c {
-            background-color: #ecfdf5;
-            border-left: 4px solid #10b981;
-        }
-
-        .event-item::before {
-            content: '';
-            position: absolute;
-            left: 29px;
-            top: 35px;
-            bottom: -20px;
-            width: 2px;
-            background: #e5e7eb;
-            z-index: 0;
-        }
-
-        .event-item:last-child::before {
-            display: none;
-        }
-
-        .icon-box {
-            width: 40px;
-            height: 40px;
-            flex-shrink: 0;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.3rem;
-            z-index: 1;
-            position: relative;
-            background: #fff;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .type-fly {
-            color: #2563eb;
-        }
-
-        .type-bus {
-            color: #16a34a;
-        }
-
-        .type-car {
-            color: #4f46e5;
-        }
-
-        .type-food {
-            color: #ea580c;
-        }
-
-        .type-beer {
-            color: #ca8a04;
-        }
-
-        .type-camera {
-            color: #db2777;
-        }
-
-        .type-shop {
-            color: #9333ea;
-        }
-
-        .type-bed {
-            color: #4b5563;
-        }
-
-        .time {
-            font-size: 0.75rem;
-            font-weight: bold;
-            color: #6b7280;
-            background: rgba(255, 255, 255, 0.8);
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-
-        .evt-title {
-            font-size: 1rem;
-            font-weight: bold;
-            color: #1f2937;
-            margin: 2px 0;
-        }
-
-        .evt-desc {
-            font-size: 0.85rem;
-            color: #6b7280;
-            line-height: 1.4;
-            white-space: pre-wrap;
-        }
-
-        .btn-map {
-            display: inline-flex;
-            align-items: center;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: #2563eb;
-            background: #eff6ff;
-            padding: 3px 8px;
-            border-radius: 6px;
-            margin-left: auto;
-            cursor: pointer;
-            border: none;
-            text-decoration: none;
-        }
-
-        .check-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px;
-            border-bottom: 1px solid #f3f4f6;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .check-box {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-            border: 2px solid #d1d5db;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 12px;
-            transition: 0.2s;
-        }
-
-        .checked .check-box {
-            background: #10b981;
-            border-color: #10b981;
-        }
-
-        .checked span {
-            text-decoration: line-through;
-            color: #9ca3af;
-        }
-
-        .check-tag {
-            font-size: 0.65rem;
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: #f3f4f6;
-            color: #6b7280;
-            font-weight: bold;
-            margin-left: auto;
-        }
-
-        .info-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px;
-            border-bottom: 1px solid #f3f4f6;
-            cursor: pointer;
-            text-decoration: none;
-            color: inherit;
-        }
-
-        .info-item:active {
-            background-color: #f9fafb;
-        }
-
-        .info-label {
-            font-weight: 600;
-            font-size: 0.95rem;
-            color: #374151;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .info-btn {
-            padding: 4px 10px;
-            border-radius: 99px;
-            font-size: 0.75rem;
-            font-weight: bold;
-        }
-
-        .info-btn.tel {
-            background: #fee2e2;
-            color: #dc2626;
-        }
-
-        .info-btn.link {
-            background: #e0e7ff;
-            color: #4f46e5;
-        }
-
-        nav {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            background: white;
-            border-top: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: space-around;
-            padding: 12px 0;
-            padding-bottom: max(12px, env(safe-area-inset-bottom));
-            z-index: 50;
-        }
-
-        .nav-btn {
-            background: none;
-            border: none;
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: #9ca3af;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            cursor: pointer;
-            width: 33%;
-            transition: 0.2s;
-        }
-
-        .nav-btn.active {
-            color: #1f2937;
-            transform: translateY(-2px);
-        }
-
-        .nav-btn svg {
-            width: 24px;
-            height: 24px;
-            stroke-width: 2px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: #6b7280;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-        }
-
-        .landing-btn {
-            background: #3b82f6;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 99px;
-            font-weight: bold;
-            text-decoration: none;
-            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
-            transition: 0.2s;
-            margin-top: 20px;
-        }
-
-        .nav-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 2rem;
-            padding-top: 1.5rem;
-            border-top: 1px dashed #e5e7eb;
-        }
-
-        .nav-control-btn {
-            font-size: 0.875rem;
-            font-weight: bold;
-            color: #6b7280;
-            background: none;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 8px;
-        }
-
-        .btn-top {
-            background: #f3f4f6;
-            padding: 8px;
-            border-radius: 50%;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>여행 가이드 V2</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --text:#172033; --muted:#6b7280; --line:#e8ebf1;
+      --primary:#2563eb; --primary-soft:#eff6ff; --danger:#dc2626; --ok:#059669;
+      --shadow:0 8px 30px rgba(15,23,42,.08); --radius:18px;
+      --safe-bottom:max(14px, env(safe-area-inset-bottom));
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",sans-serif}
+    button,a{font:inherit}
+    button{border:0}
+    .app{width:100%;max-width:760px;height:100dvh;margin:0 auto;background:var(--bg);display:flex;flex-direction:column;position:relative;overflow:hidden}
+    .hero{color:#fff;padding:calc(16px + env(safe-area-inset-top)) 18px 16px;flex:0 0 auto;background:linear-gradient(135deg,#2563eb,#06b6d4);box-shadow:0 5px 22px rgba(37,99,235,.22);z-index:20}
+    .theme-rose .hero{background:linear-gradient(135deg,#e11d48,#f97316)}
+    .theme-forest .hero{background:linear-gradient(135deg,#059669,#0f766e)}
+    .theme-violet .hero{background:linear-gradient(135deg,#7c3aed,#4f46e5)}
+    .theme-slate .hero{background:linear-gradient(135deg,#334155,#0f172a)}
+    .hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .eyebrow{font-size:12px;font-weight:800;opacity:.78;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    h1{font-size:24px;line-height:1.18;margin:4px 0 6px;font-weight:850;letter-spacing:-.03em}
+    .hero-meta{font-size:13px;opacity:.9;display:flex;gap:7px;flex-wrap:wrap}
+    .share-btn{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.24);border-radius:12px;min-width:42px;height:42px;display:grid;place-items:center;cursor:pointer}
+    .plan-switch{display:flex;gap:6px;overflow:auto;padding-top:12px;scrollbar-width:none}.plan-switch::-webkit-scrollbar{display:none}
+    .plan-btn{flex:0 0 auto;padding:8px 12px;border-radius:999px;background:rgba(15,23,42,.16);color:rgba(255,255,255,.82);font-size:12px;font-weight:800;cursor:pointer}
+    .plan-btn.active{background:#fff;color:#172033}
+    main{flex:1;overflow:auto;padding:14px 14px calc(84px + var(--safe-bottom));scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+    .today-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .day-tabs{display:flex;gap:8px;overflow:auto;scrollbar-width:none;flex:1}.day-tabs::-webkit-scrollbar{display:none}
+    .day-btn{flex:0 0 auto;padding:9px 12px;border-radius:12px;background:#fff;border:1px solid var(--line);font-size:12px;font-weight:800;color:#667085;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.02)}
+    .day-btn.active{background:#172033;color:#fff;border-color:#172033}
+    .today-btn{flex:0 0 auto;padding:9px 11px;border-radius:12px;background:var(--primary-soft);color:var(--primary);font-size:12px;font-weight:800;cursor:pointer}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 2px 12px rgba(15,23,42,.04);margin-bottom:12px;overflow:hidden}
+    .day-head{padding:16px 16px 12px}
+    .day-date{font-size:12px;font-weight:850;color:var(--primary)}
+    .day-title{font-size:19px;font-weight:850;letter-spacing:-.025em;margin-top:3px}
+    .day-note{margin-top:8px;font-size:13px;color:var(--muted);line-height:1.55;white-space:pre-wrap}
+    .progress{height:6px;border-radius:99px;background:#eef1f5;overflow:hidden;margin-top:12px}.progress>span{height:100%;display:block;background:var(--ok);border-radius:99px}
+    .progress-text{font-size:11px;color:#8a94a6;margin-top:5px}
+    .tips{padding:14px 16px}.tips-title{font-size:12px;font-weight:850;color:#8992a3;margin-bottom:8px}.tip{display:flex;gap:8px;font-size:13px;color:#4b5563;line-height:1.45;margin:6px 0}.tip::before{content:'•';color:var(--primary);font-weight:900}
+    .timeline{padding:2px 12px 6px}
+    .event{position:relative;display:grid;grid-template-columns:44px 1fr;gap:11px;padding:14px 2px 15px}
+    .event+.event{border-top:1px solid #f0f2f6}
+    .event-icon{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;font-size:20px;background:#f6f7fb;border:1px solid var(--line)}
+    .event-main{min-width:0}
+    .event-top{display:flex;align-items:center;gap:7px;min-height:25px}.time{font-size:12px;font-weight:850;color:#596273;background:#f3f4f6;padding:4px 7px;border-radius:7px}.event-done-btn{margin-left:auto;width:28px;height:28px;border-radius:50%;border:2px solid #d6dbe4;background:#fff;color:#fff;cursor:pointer;font-size:12px;font-weight:900}.event.done .event-done-btn{background:var(--ok);border-color:var(--ok)}
+    .event.done .event-title,.event.done .event-desc{opacity:.48}.event.done .event-title{text-decoration:line-through}
+    .event-title{font-size:16px;font-weight:830;letter-spacing:-.02em;margin-top:7px;line-height:1.32}.event-desc{font-size:13px;line-height:1.55;color:var(--muted);margin-top:5px;white-space:pre-wrap}
+    .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.chip{font-size:11px;font-weight:750;padding:5px 7px;border-radius:8px;background:#f5f7fa;color:#566072;border:1px solid #edf0f4}.chip.transport{background:#ecfdf5;color:#047857;border-color:#d1fae5}.chip.cost{background:#fff7ed;color:#c2410c;border-color:#ffedd5}.chip.note{background:#fff1f2;color:#be123c;border-color:#ffe4e6}.chip.common{background:#fffbeb;color:#a16207;border-color:#fef3c7}
+    .actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.action{padding:7px 9px;border-radius:9px;font-size:11px;font-weight:800;cursor:pointer;text-decoration:none;background:#f5f7fa;color:#475569}.action.primary{background:var(--primary-soft);color:var(--primary)}
+    .section-title{font-size:13px;font-weight:850;color:#697386;padding:14px 16px 7px}
+    .empty{padding:32px 18px;text-align:center;color:#9aa3b2;font-size:13px}
+    .check-row,.info-row,.budget-row{display:flex;align-items:center;gap:11px;padding:14px 16px;border-top:1px solid #f0f2f6}.check-row:first-of-type,.info-row:first-of-type,.budget-row:first-of-type{border-top:0}
+    .check-btn{width:23px;height:23px;flex:0 0 auto;border-radius:7px;border:2px solid #d7dce5;background:#fff;color:#fff;font-weight:900;cursor:pointer}.check-row.checked .check-btn{background:var(--ok);border-color:var(--ok)}.check-row.checked .check-text{text-decoration:line-through;color:#a1a8b3}.check-text{font-size:14px;flex:1}.tag{font-size:10px;font-weight:800;color:#64748b;background:#f3f4f6;padding:4px 6px;border-radius:6px}
+    .budget-summary{padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{padding:13px;border-radius:14px;background:#f7f8fb}.metric small{display:block;color:#8490a3;font-size:11px;font-weight:800;margin-bottom:4px}.metric strong{font-size:18px}.budget-row{cursor:pointer}.budget-row.paid{opacity:.5}.budget-row.paid .budget-name{text-decoration:line-through}.budget-name{flex:1;font-size:14px;font-weight:700}.budget-amt{font-size:13px;font-weight:850}.budget-cat{font-size:10px;color:#8b95a6;margin-top:3px}
+    .info-row{cursor:pointer}.info-icon{width:34px;height:34px;border-radius:10px;background:#f5f7fa;display:grid;place-items:center}.info-text{flex:1;min-width:0}.info-label{font-size:14px;font-weight:780}.info-val{font-size:12px;color:#929aaa;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.go{font-size:11px;font-weight:850;color:var(--primary);background:var(--primary-soft);padding:6px 8px;border-radius:8px}
+    .bottom-nav{position:absolute;left:0;right:0;bottom:0;padding:8px 10px var(--safe-bottom);background:rgba(255,255,255,.92);backdrop-filter:blur(18px);border-top:1px solid rgba(226,232,240,.9);display:grid;grid-template-columns:repeat(4,1fr);z-index:50}
+    .nav-btn{background:transparent;color:#9aa3b2;padding:7px 4px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:800;cursor:pointer}.nav-btn .ico{font-size:19px;line-height:1}.nav-btn.active{color:var(--primary)}
+    .landing{height:100%;display:grid;place-items:center;padding:24px}.landing-card{max-width:420px;width:100%;background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:28px;text-align:center}.landing-emoji{font-size:54px}.landing h2{margin:12px 0 8px}.landing p{color:var(--muted);font-size:14px;line-height:1.55}.landing a{display:block;margin-top:18px;background:#172033;color:white;text-decoration:none;padding:13px;border-radius:12px;font-weight:800}
+    .toast{position:absolute;left:50%;bottom:calc(86px + var(--safe-bottom));transform:translateX(-50%) translateY(10px);opacity:0;pointer-events:none;background:#172033;color:white;padding:9px 12px;border-radius:10px;font-size:12px;font-weight:750;transition:.2s;z-index:99}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    @media(min-width:761px){.app{box-shadow:0 20px 60px rgba(15,23,42,.15)}main{padding-left:18px;padding-right:18px}}
+    @media(prefers-color-scheme:dark){
+      :root{--bg:#0b1020;--card:#111827;--text:#eef2ff;--muted:#9ca3af;--line:#273145;--primary-soft:#172554}
+      .day-btn{background:#111827}.day-btn.active{background:#e5e7eb;color:#111827;border-color:#e5e7eb}.today-btn{background:#172554}.card,.event-done-btn{background:#111827}.time,.chip,.action,.tag,.info-icon,.metric{background:#182033;border-color:#273145;color:#cbd5e1}.event+.event,.check-row,.info-row,.budget-row{border-color:#1f2937}.bottom-nav{background:rgba(11,16,32,.92);border-color:#253047}.landing-card{background:#111827}.event-icon{background:#182033}
+    }
+  </style>
 </head>
-
 <body>
-
-    <div class="app-container" id="app-container">
-        <header id="header" class="bg-gray">
-            <div class="title" id="disp-title">여행 가이드</div>
-            <div id="subtitle" style="font-size:0.85rem; opacity:0.9;">Trip Manager</div>
-            <div id="mode-toggle-area" class="mode-toggle" style="display:none;"></div>
-        </header>
-
-        <main id="main-scroll">
-            <div id="content-area"></div>
-        </main>
-
-        <nav id="main-nav">
-            <button onclick="setTab('sch')" class="nav-btn active" id="btn-sch">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>일정
-            </button>
-            <button onclick="setTab('chk')" class="nav-btn" id="btn-chk">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <polyline points="9 11 12 14 22 4"></polyline>
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-                </svg>체크
-            </button>
-            <button onclick="setTab('info')" class="nav-btn" id="btn-info">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                </svg>정보
-            </button>
-        </nav>
+<div class="app" id="app">
+  <header class="hero" id="hero">
+    <div class="hero-top">
+      <div style="min-width:0">
+        <div class="eyebrow" id="destination">TRIP GUIDE</div>
+        <h1 id="title">여행 가이드</h1>
+        <div class="hero-meta" id="hero-meta"></div>
+      </div>
+      <button class="share-btn" id="share-btn" aria-label="공유">↗</button>
     </div>
+    <div class="plan-switch" id="plan-switch" hidden></div>
+  </header>
+  <main id="main"><div id="content"></div></main>
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="nav-btn active" data-tab="sch"><span class="ico">🗓️</span><span>일정</span></button>
+    <button class="nav-btn" data-tab="chk"><span class="ico">✅</span><span>체크</span></button>
+    <button class="nav-btn" data-tab="budget"><span class="ico">💳</span><span>예산</span></button>
+    <button class="nav-btn" data-tab="info"><span class="ico">ℹ️</span><span>정보</span></button>
+  </nav>
+  <div class="toast" id="toast"></div>
+</div>
+<script>
+(() => {
+  const $ = (s, el=document) => el.querySelector(s);
+  const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+  const esc = (v='') => String(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const uid = () => 'id_' + Math.random().toString(36).slice(2,10);
+  let data = null;
+  const state = {tab:'sch', day:0, mode:'A', checks:{}, done:{}, budgetPaid:{}};
 
-    <script>
-        let TRIP_DATA = null;
-        let state = { tab: 'sch', dayIdx: 0, mode: 'A', checked: {} };
+  function normalize(raw){
+    raw = raw && typeof raw === 'object' ? raw : {};
+    const d = {
+      version:2, id:raw.id || ('legacy_' + (raw.title || 'trip')),
+      title:raw.title || '나만의 여행', destination:raw.destination || '',
+      startDate:raw.startDate || '', endDate:raw.endDate || '', theme:({blue:'sky',pink:'rose',green:'forest',purple:'violet',gray:'slate'}[raw.theme] || raw.theme || 'sky'),
+      currency:raw.currency || 'JPY', useMulti:!!raw.useMulti,
+      planA:raw.planA || '', planB:raw.planB || '', planC:raw.planC || '',
+      tips:Array.isArray(raw.tips) ? raw.tips.map(x => typeof x === 'string' ? {id:uid(),text:x} : {id:x.id||uid(),text:x.text||''}) : [],
+      checks:Array.isArray(raw.checks) ? raw.checks : [], budgets:Array.isArray(raw.budgets) ? raw.budgets : [],
+      infos:Array.isArray(raw.infos) ? raw.infos : [], days:Array.isArray(raw.days) ? raw.days : []
+    };
+    d.checks = d.checks.map(c => ({id:c.id||uid(), text:c.text||'', category:c.category||'', plans:c.plans || (!c.type || c.type==='all' ? ['A','B','C'] : [c.type])}));
+    d.budgets = d.budgets.map(b => ({id:b.id||uid(),label:b.label||'',category:b.category||'',amount:Number(b.amount)||0,paid:!!b.paid}));
+    d.infos = d.infos.map(i => ({id:i.id||uid(),label:i.label||'',val:i.val||'',type:i.type||'link',category:i.category||''}));
+    d.days = d.days.map((day,di) => {
+      const mapEvents = arr => (Array.isArray(arr)?arr:[]).map(e => ({
+        id:e.id||uid(), time:e.time||e.t||'', type:e.type||'map', icon:e.icon||e.emoji||'📍', title:typeof e.title==='object'?(e.title.ko||Object.values(e.title)[0]||''):e.title||'',
+        desc:typeof e.desc==='object'?(e.desc.ko||Object.values(e.desc)[0]||''):e.desc||'', map:e.map||e.loc||'', transport:typeof e.transport==='object'?(e.transport.ko||''):e.transport||(typeof e.trans==='object'?(e.trans.ko||''):e.trans||''),
+        cost:e.cost||'', link:e.link||'', note:e.note||(e.p?('주차 '+e.p):'')||(e.warn?'주의사항 확인':'') , isCommon:!!e.isCommon
+      }));
+      return {id:day.id||uid(), date:day.date||'', title:day.title||'', note:day.note||'', eventsA:mapEvents(day.eventsA||day.events||[]), eventsB:mapEvents(day.eventsB), eventsC:mapEvents(day.eventsC)};
+    });
+    return d;
+  }
 
-        function loadData() {
-            const hash = window.location.hash;
-            if (hash && hash.startsWith('#data=')) {
-                try {
-                    const compressed = hash.substring(6);
-                    const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
-                    if (jsonStr) TRIP_DATA = JSON.parse(jsonStr);
-                } catch (e) { console.error("Data Load Error", e); }
-            }
+  function load(){
+    const h = location.hash;
+    if(h.startsWith('#data=')){
+      try{
+        if(!window.LZString) throw new Error('compression library unavailable');
+        const json = LZString.decompressFromEncodedURIComponent(h.slice(6));
+        data = normalize(JSON.parse(json));
+      }catch(e){ console.error(e); }
+    }
+    if(!data){ renderLanding(); return false; }
+    const key = 'tripv2_state_' + data.id;
+    try{ Object.assign(state, JSON.parse(localStorage.getItem(key)||'{}')); }catch(e){}
+    const today = findTodayIndex();
+    if(today >= 0 && !sessionStorage.getItem('tripv2_day_picked_'+data.id)){
+      state.day = today; sessionStorage.setItem('tripv2_day_picked_'+data.id,'1');
+    }
+    state.day = Math.max(0, Math.min(state.day||0, Math.max(0,data.days.length-1)));
+    return true;
+  }
 
-            if (!TRIP_DATA) {
-                document.getElementById('app-container').innerHTML = `
-                <div class="empty-state">
-                    <div style="font-size:4rem; margin-bottom:1rem;">🧳</div>
-                    <h3 style="margin-bottom:0.5rem; font-weight:800; font-size:1.5rem;">나만의 여행 가이드</h3>
-                    <p style="color:#6b7280; margin-bottom:2rem;">생성된 여행 일정이 없습니다.<br>빌더에서 여행 계획을 만들어보세요!</p>
-                    <a href="builder.html" class="landing-btn">✨ 여행 만들기 (빌더 이동)</a>
-                </div>
-            `;
-                return false;
-            }
-
-            const savedChecks = localStorage.getItem('chk_' + TRIP_DATA.title);
-            if (savedChecks) state.checked = JSON.parse(savedChecks);
-            return true;
-        }
-
-        function init() {
-            if (!loadData()) return;
-            document.getElementById('disp-title').innerText = TRIP_DATA.title;
-            document.getElementById('header').className = 'bg-' + (TRIP_DATA.theme || 'blue');
-
-            const toggleArea = document.getElementById('mode-toggle-area');
-            toggleArea.innerHTML = '';
-            if (TRIP_DATA.useMulti) {
-                let html = '';
-                const nameA = TRIP_DATA.planA || 'Plan A';
-                html += `<button onclick="setMode('A')" id="btn-mode-a" class="mode-btn">${nameA}</button>`;
-                if (TRIP_DATA.planB) html += `<button onclick="setMode('B')" id="btn-mode-b" class="mode-btn">${TRIP_DATA.planB}</button>`;
-                if (TRIP_DATA.planC) html += `<button onclick="setMode('C')" id="btn-mode-c" class="mode-btn">${TRIP_DATA.planC}</button>`;
-                toggleArea.innerHTML = html;
-                toggleArea.style.display = 'flex';
-            } else {
-                toggleArea.style.display = 'none';
-            }
-            render();
-        }
-
-        function render() {
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('btn-' + state.tab).classList.add('active');
-            const content = document.getElementById('content-area');
-            content.innerHTML = '';
-
-            if (state.tab === 'sch') renderSchedule(content);
-            else if (state.tab === 'chk') renderChecklist(content);
-            else renderInfo(content);
-
-            if (TRIP_DATA.useMulti) {
-                ['A', 'B', 'C'].forEach(m => {
-                    const btn = document.getElementById('btn-mode-' + m.toLowerCase());
-                    if (btn) btn.className = state.mode === m ? 'mode-btn active' : 'mode-btn';
-                });
-            }
-        }
-
-        function renderSchedule(cont) {
-            if (!TRIP_DATA.days || !TRIP_DATA.days.length) {
-                cont.innerHTML = '<div class="card" style="text-align:center; color:#9ca3af;">일정이 없습니다.</div>';
-                return;
-            }
-
-            let tabs = '<div class="day-tabs">';
-            TRIP_DATA.days.forEach((d, i) => {
-                tabs += `<button onclick="setDay(${i})" class="day-btn ${i === state.dayIdx ? 'active' : ''}">${d.date}</button>`;
-            });
-            tabs += '</div>';
-
-            const curDay = TRIP_DATA.days[state.dayIdx];
-            let events = [];
-            let planName = "";
-
-            if (state.mode === 'B') { events = curDay.eventsB || []; planName = TRIP_DATA.planB; }
-            else if (state.mode === 'C') { events = curDay.eventsC || []; planName = TRIP_DATA.planC; }
-            else { events = curDay.eventsA || []; planName = TRIP_DATA.planA; }
-
-            if (state.mode !== 'A') {
-                const commonEvents = (curDay.eventsA || []).filter(e => e.isCommon);
-                events = [...events, ...commonEvents];
-            }
-
-            events.sort((a, b) => a.time.localeCompare(b.time));
-
-            if (TRIP_DATA.useMulti) {
-                document.getElementById('subtitle').innerText = (planName || ('Plan ' + state.mode)) + ' 일정';
-            } else {
-                document.getElementById('subtitle').innerText = curDay.title || '즐거운 여행 되세요!';
-            }
-
-            let list = '<div class="card">';
-            if (!events || events.length === 0) {
-                list += `<div style="text-align:center; padding:20px; color:#9ca3af;">등록된 일정이 없습니다.</div>`;
-            } else {
-                events.forEach(e => {
-                    const mapBtn = e.map ? `<button onclick="openMap('${e.map}')" class="btn-map">📍 구글맵</button>` : '';
-
-                    let planClass = 'plan-a';
-                    if (e.isCommon) planClass = 'is-common';
-                    else if (state.mode === 'B') planClass = 'plan-b';
-                    else if (state.mode === 'C') planClass = 'plan-c';
-
-                    list += `
-                <div class="event-item ${planClass}">
-                    <div class="icon-box type-${e.type}">${e.icon}</div>
-                    <div style="flex:1;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span class="time">${e.time}</span>
-                            ${mapBtn}
-                        </div>
-                        <div class="evt-title">${e.title}</div>
-                        <div class="evt-desc">${e.desc}</div>
-                    </div>
-                </div>`;
-                });
-            }
-            list += '</div>';
-
-            list += '<div class="nav-controls">';
-            if (state.dayIdx > 0) list += `<button onclick="setDay(${state.dayIdx - 1})" class="nav-control-btn">◀ 이전 날</button>`;
-            else list += `<div></div>`;
-            list += `<button onclick="scrollToTop()" class="nav-control-btn btn-top">⬆ 맨 위로</button>`;
-            if (state.dayIdx < TRIP_DATA.days.length - 1) list += `<button onclick="setDay(${state.dayIdx + 1})" class="nav-control-btn">다음 날 ▶</button>`;
-            else list += `<div></div>`;
-            list += '</div>';
-
-            cont.innerHTML = tabs + list;
-        }
-
-        function renderChecklist(cont) {
-            document.getElementById('subtitle').innerText = '준비물 체크리스트';
-            let html = '<div class="card"><div class="card-title">👜 짐싸기</div>';
-
-            const filteredChecks = (TRIP_DATA.checks || []).filter(c => {
-                if (!TRIP_DATA.useMulti) return true;
-
-                // 데이터 마이그레이션 (구버전 호환) - 뷰어에서도 필요
-                let plans = c.plans;
-                if (!plans) {
-                    if (!c.type || c.type === 'all') plans = ['A', 'B', 'C'];
-                    else plans = [c.type];
-                }
-
-                return plans.includes(state.mode);
-            });
-
-            if (filteredChecks.length === 0) {
-                html += `<div style="text-align:center; padding:1rem; color:#9ca3af;">항목이 없습니다.</div>`;
-            }
-
-            filteredChecks.forEach((c) => {
-                const realIdx = TRIP_DATA.checks.indexOf(c);
-                const isChk = state.checked[realIdx];
-
-                // 태그 표시 로직: 모든 플랜(A,B,C)에 다 있으면 태그 없음, 아니면 해당 플랜만 표시
-                let tag = '';
-                let plans = c.plans;
-                if (!plans) { // 호환성
-                    if (!c.type || c.type === 'all') plans = ['A', 'B', 'C'];
-                    else plans = [c.type];
-                }
-
-                if (TRIP_DATA.useMulti && plans.length < 3) {
-                    tag = `<span class="check-tag">${plans.join('/')} Only</span>`;
-                }
-
-                html += `
-            <div class="check-item ${isChk ? 'checked' : ''}" onclick="toggleCheck(${realIdx})">
-                <div class="check-box">${isChk ? '✔' : ''}</div>
-                <span>${c.text}</span>
-                ${tag}
-            </div>`;
-            });
-            html += '</div>';
-            cont.innerHTML = html;
-        }
-
-        function safeCall(val) {
-            if (confirm(val + "\n통화 연결하시겠습니까?")) {
-                location.href = 'tel:' + val;
-            }
-        }
-
-        function renderInfo(cont) {
-            document.getElementById('subtitle').innerText = '유용한 정보';
-            if (!TRIP_DATA.infos || TRIP_DATA.infos.length === 0) {
-                cont.innerHTML = '<div class="card"><div style="text-align:center; padding:2rem; color:#9ca3af;">등록된 정보가 없습니다.</div></div>';
-                return;
-            }
-
-            let html = '<div class="card"><div class="card-title">ℹ️ 여행 정보</div>';
-            TRIP_DATA.infos.forEach(info => {
-                const isTel = (info.type === 'tel') || (!info.type && /^[0-9\-\+\(\)\s]+$/.test(info.val));
-                const action = isTel ? `safeCall('${info.val}')` : `window.open('${info.val}')`;
-                const icon = isTel ? '📞' : '🔗';
-                const btnClass = isTel ? 'tel' : 'link';
-                const btnText = isTel ? 'Call' : 'Go';
-
-                html += `
-            <div class="info-item" onclick="${action}">
-                <div class="info-label"><span style="margin-right:5px;">${icon}</span> ${info.label}</div>
-                <span class="info-btn ${btnClass}">${btnText}</span>
-            </div>`;
-            });
-            html += '</div>';
-            cont.innerHTML = html;
-        }
-
-        window.setTab = (t) => { state.tab = t; render(); window.scrollTo(0, 0); };
-        window.setDay = (i) => { state.dayIdx = i; render(); scrollToTop(); };
-        window.setMode = (m) => { state.mode = m; render(); window.scrollTo(0, 0); };
-        window.openMap = (q) => window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q));
-        window.toggleCheck = (i) => { state.checked[i] = !state.checked[i]; localStorage.setItem('chk_' + TRIP_DATA.title, JSON.stringify(state.checked)); render(); };
-        window.scrollToTop = () => { document.getElementById('main-scroll').scrollTo({ top: 0, behavior: 'smooth' }); };
-
-        document.getElementById('main-scroll').addEventListener('scroll', function () {
-            if (this.scrollTop > 20) document.getElementById('header').classList.add('shrink');
-            else document.getElementById('header').classList.remove('shrink');
-        });
-
-        init();
-    </script>
+  function saveState(){
+    try{ localStorage.setItem('tripv2_state_'+data.id, JSON.stringify(state)); }catch(e){}
+  }
+  function renderLanding(){
+    $('#hero').style.display='none'; $('#bottom-nav').style.display='none';
+    $('#main').innerHTML = `<div class="landing"><div class="landing-card"><div class="landing-emoji">🧳</div><h2>여행 데이터가 없어요</h2><p>빌더에서 일정을 만든 뒤 미리보기를 열거나 공유 링크로 접속해 주세요.</p><a href="builder.html">여행 계획 만들기</a></div></div>`;
+  }
+  function formatDate(iso){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return iso||'';
+    const d = new Date(iso+'T00:00:00');
+    return `${d.getMonth()+1}/${d.getDate()} (${['일','월','화','수','목','금','토'][d.getDay()]})`;
+  }
+  function tripLength(){
+    if(data.startDate && data.endDate){
+      const a=new Date(data.startDate+'T00:00:00'), b=new Date(data.endDate+'T00:00:00');
+      const n=Math.round((b-a)/86400000)+1; if(n>0&&n<1000) return n;
+    }
+    return data.days.length;
+  }
+  function ddayText(){
+    if(!data.startDate) return '';
+    const today=new Date(); today.setHours(0,0,0,0);
+    const s=new Date(data.startDate+'T00:00:00'); const e=data.endDate?new Date(data.endDate+'T00:00:00'):s;
+    const diff=Math.round((s-today)/86400000);
+    if(today>=s&&today<=e) return '여행 중 ✨';
+    if(diff===0) return '오늘 출발 ✈️';
+    if(diff>0) return `D-${diff}`;
+    return '';
+  }
+  function findTodayIndex(){
+    const y = new Date(); const iso = `${y.getFullYear()}-${String(y.getMonth()+1).padStart(2,'0')}-${String(y.getDate()).padStart(2,'0')}`;
+    return data.days.findIndex(d => d.date === iso);
+  }
+  function currentPlanEvents(day){
+    let arr = state.mode==='B'?(day.eventsB||[]):state.mode==='C'?(day.eventsC||[]):(day.eventsA||[]);
+    if(state.mode!=='A') arr = [...arr, ...(day.eventsA||[]).filter(e=>e.isCommon)];
+    return [...arr].sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
+  }
+  function renderChrome(){
+    document.body.className = 'theme-' + (data.theme||'sky');
+    $('#title').textContent=data.title; $('#destination').textContent=data.destination||'TRIP GUIDE';
+    const parts=[]; if(data.startDate) parts.push(`${formatDate(data.startDate)}${data.endDate&&data.endDate!==data.startDate?' ~ '+formatDate(data.endDate):''}`); if(tripLength()) parts.push(`${tripLength()}일`); const dd=ddayText(); if(dd) parts.push(dd);
+    $('#hero-meta').innerHTML = parts.map(x=>`<span>${esc(x)}</span>`).join('<span>•</span>');
+    const sw=$('#plan-switch');
+    if(data.useMulti){
+      const plans=[['A',data.planA||'Plan A'],['B',data.planB||'Plan B'],['C',data.planC||'Plan C']].filter(([k,n])=>k==='A'||n);
+      sw.hidden=false; sw.innerHTML=plans.map(([k,n])=>`<button class="plan-btn ${state.mode===k?'active':''}" data-mode="${k}">${esc(n)}</button>`).join('');
+    }else sw.hidden=true;
+    $$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===state.tab));
+  }
+  function render(){
+    renderChrome(); const c=$('#content');
+    if(state.tab==='sch') c.innerHTML=renderSchedule();
+    else if(state.tab==='chk') c.innerHTML=renderChecks();
+    else if(state.tab==='budget') c.innerHTML=renderBudget();
+    else c.innerHTML=renderInfo();
+  }
+  function renderSchedule(){
+    if(!data.days.length) return `<div class="card"><div class="empty">등록된 일정이 없어요.</div></div>`;
+    const todayIdx=findTodayIndex();
+    const tabs=data.days.map((d,i)=>`<button class="day-btn ${i===state.day?'active':''}" data-day="${i}">Day ${i+1}<br><span style="font-weight:650;opacity:.72">${esc(formatDate(d.date))}</span></button>`).join('');
+    const day=data.days[state.day]||data.days[0], evs=currentPlanEvents(day);
+    const total=evs.length, done=evs.filter(e=>state.done[e.id]).length, pct=total?Math.round(done/total*100):0;
+    const head=`<div class="today-bar"><div class="day-tabs">${tabs}</div>${todayIdx>=0?`<button class="today-btn" data-day="${todayIdx}">오늘</button>`:''}</div>
+      ${data.tips.length?`<div class="card tips"><div class="tips-title">✦ 여행 포인트</div>${data.tips.filter(t=>t.text).map(t=>`<div class="tip">${esc(t.text)}</div>`).join('')}</div>`:''}
+      <div class="card"><div class="day-head"><div class="day-date">DAY ${state.day+1} · ${esc(formatDate(day.date))}</div><div class="day-title">${esc(day.title||'오늘의 일정')}</div>${day.note?`<div class="day-note">${esc(day.note)}</div>`:''}<div class="progress"><span style="width:${pct}%"></span></div><div class="progress-text">일정 ${done}/${total} 완료</div></div><div class="timeline">`;
+    const body=evs.length?evs.map(e=>renderEvent(e)).join(''):`<div class="empty">이 플랜에는 일정이 없어요.</div>`;
+    return head+body+'</div></div>';
+  }
+  function renderEvent(e){
+    const done=!!state.done[e.id];
+    const chips=[]; if(e.isCommon) chips.push(`<span class="chip common">공통 일정</span>`); if(e.transport) chips.push(`<span class="chip transport">🚆 ${esc(e.transport)}</span>`); if(e.cost) chips.push(`<span class="chip cost">💴 ${esc(e.cost)}</span>`); if(e.note) chips.push(`<span class="chip note">⚠ ${esc(e.note)}</span>`);
+    const acts=[]; if(e.map) acts.push(`<button class="action primary" data-map="${esc(e.map)}">📍 지도</button>`); if(e.map) acts.push(`<button class="action" data-copy="${esc(e.map)}">복사</button>`); if(e.link) acts.push(`<button class="action" data-link="${esc(e.link)}">🔗 예약/링크</button>`);
+    return `<div class="event ${done?'done':''}"><div class="event-icon">${esc(e.icon||'📍')}</div><div class="event-main"><div class="event-top"><span class="time">${esc(e.time||'시간 미정')}</span><button class="event-done-btn" data-done="${esc(e.id)}" aria-label="완료">${done?'✓':''}</button></div><div class="event-title">${esc(e.title||'제목 없음')}</div>${e.desc?`<div class="event-desc">${esc(e.desc)}</div>`:''}${chips.length?`<div class="chips">${chips.join('')}</div>`:''}${acts.length?`<div class="actions">${acts.join('')}</div>`:''}</div></div>`;
+  }
+  function renderChecks(){
+    const list=(data.checks||[]).filter(c=>!data.useMulti || (c.plans||['A','B','C']).includes(state.mode));
+    const done=list.filter(c=>state.checks[c.id]).length;
+    return `<div class="card"><div class="section-title">준비물 · ${done}/${list.length} 완료</div>${list.length?list.map(c=>`<div class="check-row ${state.checks[c.id]?'checked':''}"><button class="check-btn" data-check="${esc(c.id)}">${state.checks[c.id]?'✓':''}</button><div class="check-text">${esc(c.text)}</div>${c.category?`<span class="tag">${esc(c.category)}</span>`:''}</div>`).join(''):`<div class="empty">체크리스트가 비어 있어요.</div>`}</div>`;
+  }
+  function money(n){ return new Intl.NumberFormat('ko-KR').format(Number(n)||0) + ' ' + esc(data.currency||''); }
+  function renderBudget(){
+    const list=data.budgets||[]; const total=list.reduce((s,b)=>s+(Number(b.amount)||0),0); const paid=list.reduce((s,b)=>s+((state.budgetPaid[b.id]??b.paid)?(Number(b.amount)||0):0),0);
+    return `<div class="card"><div class="budget-summary"><div class="metric"><small>예상 총액</small><strong>${money(total)}</strong></div><div class="metric"><small>결제 완료</small><strong>${money(paid)}</strong></div></div>${list.length?list.map(b=>{const p=state.budgetPaid[b.id]??b.paid;return `<div class="budget-row ${p?'paid':''}" data-budget="${esc(b.id)}"><div style="flex:1"><div class="budget-name">${esc(b.label||'항목')}</div>${b.category?`<div class="budget-cat">${esc(b.category)}</div>`:''}</div><div class="budget-amt">${money(b.amount)}</div></div>`}).join(''):`<div class="empty">예산 항목이 없어요.</div>`}</div>`;
+  }
+  function renderInfo(){
+    const list=data.infos||[]; return `<div class="card"><div class="section-title">여행 정보</div>${list.length?list.map(i=>{const icon=i.type==='tel'?'📞':i.type==='map'?'📍':i.type==='text'?'📝':'🔗';return `<div class="info-row" data-info="${esc(i.id)}"><div class="info-icon">${icon}</div><div class="info-text"><div class="info-label">${esc(i.label||'정보')}</div><div class="info-val">${esc(i.val||'')}</div></div><span class="go">${i.type==='text'?'보기':'열기'}</span></div>`}).join(''):`<div class="empty">등록된 정보가 없어요.</div>`}</div>`;
+  }
+  function safeOpen(url){ try{ const u=new URL(url,location.href); if(['http:','https:'].includes(u.protocol)) window.open(u.href,'_blank','noopener'); else toast('열 수 없는 링크예요'); }catch(e){ toast('링크 형식을 확인해 주세요'); } }
+  function openMap(q){
+    if(/^https?:\/\//i.test(q)) safeOpen(q);
+    else window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q),'_blank','noopener');
+  }
+  function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),1500)}
+  async function share(){
+    const payload={title:data.title,text:(data.destination?data.destination+' · ':'')+data.title,url:location.href};
+    if(navigator.share){try{await navigator.share(payload);return}catch(e){if(e.name==='AbortError')return}}
+    try{await navigator.clipboard.writeText(location.href);toast('링크를 복사했어요')}catch(e){prompt('링크를 복사하세요',location.href)}
+  }
+  function handleInfo(id){
+    const i=data.infos.find(x=>x.id===id); if(!i)return;
+    if(i.type==='tel'){ if(confirm(`${i.val}\n통화 연결할까요?`)) location.href='tel:'+i.val; }
+    else if(i.type==='map') openMap(i.val);
+    else if(i.type==='text') alert(`${i.label}\n\n${i.val}`);
+    else if(i.val) safeOpen(i.val);
+  }
+  document.addEventListener('click', async e=>{
+    const tab=e.target.closest('[data-tab]'); if(tab){state.tab=tab.dataset.tab;render();$('#main').scrollTop=0;saveState();return}
+    const day=e.target.closest('[data-day]'); if(day){state.day=Number(day.dataset.day);render();$('#main').scrollTo({top:0,behavior:'smooth'});saveState();return}
+    const mode=e.target.closest('[data-mode]'); if(mode){state.mode=mode.dataset.mode;render();saveState();return}
+    const done=e.target.closest('[data-done]'); if(done){state.done[done.dataset.done]=!state.done[done.dataset.done];render();saveState();return}
+    const chk=e.target.closest('[data-check]'); if(chk){state.checks[chk.dataset.check]=!state.checks[chk.dataset.check];render();saveState();return}
+    const bud=e.target.closest('[data-budget]'); if(bud){const b=data.budgets.find(x=>x.id===bud.dataset.budget);const cur=state.budgetPaid[b.id]??b.paid;state.budgetPaid[b.id]=!cur;render();saveState();return}
+    const map=e.target.closest('[data-map]'); if(map){openMap(map.dataset.map);return}
+    const link=e.target.closest('[data-link]'); if(link){safeOpen(link.dataset.link);return}
+    const copy=e.target.closest('[data-copy]'); if(copy){try{await navigator.clipboard.writeText(copy.dataset.copy);toast('장소를 복사했어요')}catch(err){}return}
+    const inf=e.target.closest('[data-info]'); if(inf){handleInfo(inf.dataset.info);return}
+  });
+  $('#share-btn').addEventListener('click',share);
+  if(load()) render();
+})();
+</script>
 </body>
-
 </html>
